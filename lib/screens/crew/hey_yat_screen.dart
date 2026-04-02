@@ -1,0 +1,734 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:speech_to_text/speech_to_text.dart';
+import 'package:speech_to_text/speech_recognition_result.dart';
+import 'package:permission_handler/permission_handler.dart';
+import '../../config/theme.dart';
+import '../../models/models.dart';
+import '../../providers/app_provider.dart';
+import '../../services/ai_service.dart';
+import '../../widgets/common_widgets.dart';
+
+enum _HeyYatState {
+  idle,
+  listening,
+  processing,
+  result,
+  saved,
+}
+
+class HeyYatScreen extends StatefulWidget {
+  const HeyYatScreen({super.key});
+
+  @override
+  State<HeyYatScreen> createState() => _HeyYatScreenState();
+}
+
+class _HeyYatScreenState extends State<HeyYatScreen>
+    with TickerProviderStateMixin {
+  final SpeechToText _speech = SpeechToText();
+  final AiService _ai = AiService();
+  final TextEditingController _manualCtrl = TextEditingController();
+
+  _HeyYatState _state = _HeyYatState.idle;
+  bool _speechAvailable = false;
+  String _transcript = '';
+  AiClassificationResult? _result;
+  String? _errorMsg;
+  bool _showManualInput = false;
+
+  late AnimationController _pulseCtrl;
+  late Animation<double> _pulseAnim;
+  late AnimationController _spinCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..repeat(reverse: true);
+    _pulseAnim =
+        Tween<double>(begin: 1.0, end: 1.18).animate(CurvedAnimation(
+      parent: _pulseCtrl,
+      curve: Curves.easeInOut,
+    ));
+    _spinCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    );
+    _initSpeech();
+  }
+
+  Future<void> _initSpeech() async {
+    final status = await Permission.microphone.request();
+    if (status.isGranted) {
+      _speechAvailable = await _speech.initialize(
+        onStatus: _onSpeechStatus,
+        onError: (_) => _onSpeechError(),
+      );
+    }
+    if (mounted) setState(() {});
+  }
+
+  void _onSpeechStatus(String status) {
+    if (status == 'done' || status == 'notListening') {
+      if (_state == _HeyYatState.listening && _transcript.isNotEmpty) {
+        _processTranscript(_transcript);
+      } else if (_state == _HeyYatState.listening) {
+        setState(() => _state = _HeyYatState.idle);
+      }
+    }
+  }
+
+  void _onSpeechError() {
+    if (mounted) {
+      setState(() {
+        _state = _HeyYatState.idle;
+        _errorMsg = 'Error de reconocimiento. Intenta de nuevo.';
+      });
+    }
+  }
+
+  Future<void> _startListening() async {
+    setState(() {
+      _state = _HeyYatState.listening;
+      _transcript = '';
+      _result = null;
+      _errorMsg = null;
+    });
+    _pulseCtrl.repeat(reverse: true);
+
+    if (!_speechAvailable) {
+      setState(() {
+        _showManualInput = true;
+        _state = _HeyYatState.idle;
+      });
+      return;
+    }
+
+    await _speech.listen(
+      onResult: _onResult,
+      localeId: 'es_ES',
+      listenFor: const Duration(seconds: 15),
+      pauseFor: const Duration(seconds: 3),
+      listenOptions: SpeechListenOptions(partialResults: true),
+    );
+  }
+
+  void _onResult(SpeechRecognitionResult result) {
+    setState(() => _transcript = result.recognizedWords);
+    if (result.finalResult && _transcript.isNotEmpty) {
+      _speech.stop();
+      _processTranscript(_transcript);
+    }
+  }
+
+  Future<void> _stopListening() async {
+    await _speech.stop();
+    if (_transcript.isNotEmpty) {
+      _processTranscript(_transcript);
+    } else {
+      setState(() => _state = _HeyYatState.idle);
+    }
+  }
+
+  Future<void> _processTranscript(String text) async {
+    setState(() {
+      _state = _HeyYatState.processing;
+      _transcript = text;
+    });
+    _spinCtrl.repeat();
+
+    try {
+      final result = await _ai.classify(text);
+      if (mounted) {
+        setState(() {
+          _result = result;
+          _state = _HeyYatState.result;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _state = _HeyYatState.idle;
+          _errorMsg = 'Error al clasificar. Comprueba tu conexión.';
+        });
+      }
+    } finally {
+      _spinCtrl.stop();
+    }
+  }
+
+  Future<void> _confirm() async {
+    if (_result == null) return;
+    final provider = context.read<AppProvider>();
+
+    final cmd = VoiceCommand(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      transcript: _transcript,
+      category: _result!.categoria,
+      priority: _result!.prioridad,
+      extractedData: _result!.datosExtraidos,
+      userResponse: _result!.respuestaUsuario,
+      timestamp: DateTime.now(),
+    );
+
+    await provider.processVoiceCommand(cmd, _result!);
+
+    setState(() {
+      _state = _HeyYatState.saved;
+      _transcript = '';
+      _result = null;
+    });
+
+    await Future.delayed(const Duration(seconds: 2));
+    if (mounted) setState(() => _state = _HeyYatState.idle);
+  }
+
+  void _cancel() {
+    setState(() {
+      _state = _HeyYatState.idle;
+      _transcript = '';
+      _result = null;
+    });
+  }
+
+  @override
+  void dispose() {
+    _pulseCtrl.dispose();
+    _spinCtrl.dispose();
+    _speech.stop();
+    _manualCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(child: _buildMain()),
+            _buildHistory(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMain() {
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // Title
+          Text('HEY YAT', style: AppTheme.orbitron(size: 20)),
+          const SizedBox(height: 4),
+          const Text(
+            'Asistente de voz inteligente',
+            style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+          ),
+          const SizedBox(height: 40),
+
+          // Main state content
+          _buildStateContent(),
+
+          const SizedBox(height: 32),
+
+          // Error message
+          if (_errorMsg != null)
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppTheme.errorColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                    color: AppTheme.errorColor.withOpacity(0.4)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.error_outline,
+                      color: AppTheme.errorColor, size: 16),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(_errorMsg!,
+                        style: const TextStyle(
+                            color: AppTheme.errorColor, fontSize: 12)),
+                  ),
+                ],
+              ),
+            ),
+
+          // Manual input toggle
+          if (_state == _HeyYatState.idle) ...[
+            const SizedBox(height: 16),
+            TextButton.icon(
+              onPressed: () =>
+                  setState(() => _showManualInput = !_showManualInput),
+              icon: Icon(
+                  _showManualInput
+                      ? Icons.keyboard_hide
+                      : Icons.keyboard_alt_outlined,
+                  size: 16),
+              label: Text(
+                  _showManualInput
+                      ? 'Ocultar teclado'
+                      : 'Escribir manualmente',
+                  style: const TextStyle(fontSize: 12)),
+              style: TextButton.styleFrom(
+                  foregroundColor: AppTheme.textSecondary),
+            ),
+            if (_showManualInput) ...[
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _manualCtrl,
+                      style: const TextStyle(color: AppTheme.textPrimary),
+                      decoration: const InputDecoration(
+                        hintText: 'Escribe tu mensaje...',
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton(
+                    onPressed: () {
+                      final text = _manualCtrl.text.trim();
+                      if (text.isNotEmpty) {
+                        _manualCtrl.clear();
+                        _processTranscript(text);
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.all(14)),
+                    child: const Icon(Icons.send),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStateContent() {
+    return switch (_state) {
+      _HeyYatState.idle => _buildIdleState(),
+      _HeyYatState.listening => _buildListeningState(),
+      _HeyYatState.processing => _buildProcessingState(),
+      _HeyYatState.result => _buildResultState(),
+      _HeyYatState.saved => _buildSavedState(),
+    };
+  }
+
+  Widget _buildIdleState() {
+    return Column(
+      children: [
+        GestureDetector(
+          onTap: _startListening,
+          child: Container(
+            width: 110,
+            height: 110,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppTheme.accent.withOpacity(0.1),
+              border: Border.all(color: AppTheme.accent, width: 2),
+            ),
+            child: const Icon(Icons.mic_none, color: AppTheme.accent, size: 50),
+          ),
+        ),
+        const SizedBox(height: 20),
+        Text(
+          _speechAvailable
+              ? 'Pulsa y habla'
+              : 'Micrófono no disponible',
+          style: AppTheme.orbitron(
+              size: 13,
+              color: _speechAvailable
+                  ? AppTheme.textPrimary
+                  : AppTheme.textSecondary),
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          '"el winch 3 vibra"  ·  "queda poca lejía"\n"al owner le gusta el sushi"',
+          style: TextStyle(
+              color: AppTheme.textSecondary,
+              fontSize: 11,
+              height: 1.6),
+          textAlign: TextAlign.center,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildListeningState() {
+    return Column(
+      children: [
+        GestureDetector(
+          onTap: _stopListening,
+          child: ScaleTransition(
+            scale: _pulseAnim,
+            child: Container(
+              width: 110,
+              height: 110,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppTheme.errorColor.withOpacity(0.15),
+                border: Border.all(color: AppTheme.errorColor, width: 2),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppTheme.errorColor.withOpacity(0.3),
+                    blurRadius: 20,
+                    spreadRadius: 4,
+                  ),
+                ],
+              ),
+              child: const Icon(Icons.mic, color: AppTheme.errorColor, size: 50),
+            ),
+          ),
+        ),
+        const SizedBox(height: 20),
+        Text('ESCUCHANDO...',
+            style: AppTheme.orbitron(
+                size: 13, color: AppTheme.errorColor)),
+        const SizedBox(height: 12),
+        if (_transcript.isNotEmpty)
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AppTheme.panel,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: AppTheme.dividerColor),
+            ),
+            child: Text(
+              _transcript,
+              style: const TextStyle(
+                  color: AppTheme.textPrimary, fontSize: 14, height: 1.5),
+              textAlign: TextAlign.center,
+            ),
+          )
+        else
+          const Text('Habla ahora...',
+              style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+        const SizedBox(height: 12),
+        TextButton(
+          onPressed: _stopListening,
+          child: const Text('Detener'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildProcessingState() {
+    return Column(
+      children: [
+        RotationTransition(
+          turns: _spinCtrl,
+          child: Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                  color: AppTheme.accent.withOpacity(0.5), width: 3),
+            ),
+            child: const Icon(Icons.auto_awesome,
+                color: AppTheme.accent, size: 36),
+          ),
+        ),
+        const SizedBox(height: 20),
+        Text('CLASIFICANDO...',
+            style: AppTheme.orbitron(size: 13, color: AppTheme.accent)),
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: AppTheme.panel,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: AppTheme.dividerColor),
+          ),
+          child: Text('"$_transcript"',
+              style: const TextStyle(
+                  color: AppTheme.textSecondary,
+                  fontSize: 13,
+                  fontStyle: FontStyle.italic),
+              textAlign: TextAlign.center),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildResultState() {
+    if (_result == null) return const SizedBox.shrink();
+    final r = _result!;
+    return SingleChildScrollView(
+      child: Column(
+        children: [
+          // Transcript
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AppTheme.panel,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: AppTheme.dividerColor),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('TRANSCRIPCIÓN',
+                    style: TextStyle(
+                        color: AppTheme.textSecondary,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1)),
+                const SizedBox(height: 6),
+                Text('"$_transcript"',
+                    style: const TextStyle(
+                        color: AppTheme.textPrimary,
+                        fontSize: 14,
+                        fontStyle: FontStyle.italic)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Classification card
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppTheme.panel,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                  color: AppTheme.accent.withOpacity(0.4)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    CategoryIcon(r.categoria),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(r.categoria,
+                              style: AppTheme.orbitron(
+                                  size: 12, color: AppTheme.accent)),
+                          Text(
+                            'Prioridad: ${r.prioridad.toUpperCase()}',
+                            style: const TextStyle(
+                                color: AppTheme.textSecondary,
+                                fontSize: 11),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                const Divider(color: AppTheme.dividerColor),
+                const SizedBox(height: 10),
+                // Extracted data
+                ...r.datosExtraidos.entries
+                    .where((e) => e.value != null && e.value.toString().isNotEmpty)
+                    .map((e) => Padding(
+                          padding: const EdgeInsets.only(bottom: 6),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '${e.key}: ',
+                                style: const TextStyle(
+                                    color: AppTheme.textSecondary,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold),
+                              ),
+                              Expanded(
+                                child: Text(
+                                  '${e.value}',
+                                  style: const TextStyle(
+                                      color: AppTheme.textPrimary,
+                                      fontSize: 12),
+                                ),
+                              ),
+                            ],
+                          ),
+                        )),
+                const SizedBox(height: 10),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppTheme.successColor.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                        color: AppTheme.successColor.withOpacity(0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.check_circle_outline,
+                          color: AppTheme.successColor, size: 16),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(r.respuestaUsuario,
+                            style: const TextStyle(
+                                color: AppTheme.successColor, fontSize: 12)),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Confirm / Cancel buttons
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _cancel,
+                  icon: const Icon(Icons.close, size: 16),
+                  label: const Text('Cancelar'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppTheme.textSecondary,
+                    side: const BorderSide(color: AppTheme.dividerColor),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                flex: 2,
+                child: ElevatedButton.icon(
+                  onPressed: _confirm,
+                  icon: const Icon(Icons.save_outlined, size: 16),
+                  label: const Text('CONFIRMAR Y GUARDAR'),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSavedState() {
+    return Column(
+      children: [
+        Container(
+          width: 90,
+          height: 90,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: AppTheme.successColor.withOpacity(0.1),
+            border: Border.all(color: AppTheme.successColor, width: 2),
+          ),
+          child: const Icon(Icons.check,
+              color: AppTheme.successColor, size: 44),
+        ),
+        const SizedBox(height: 20),
+        Text('¡REGISTRADO!',
+            style: AppTheme.orbitron(
+                size: 16, color: AppTheme.successColor)),
+        const SizedBox(height: 8),
+        const Text('Guardado en el sistema',
+            style:
+                TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+      ],
+    );
+  }
+
+  Widget _buildHistory() {
+    final commands = context.watch<AppProvider>().voiceCommands.take(5).toList();
+    if (commands.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppTheme.panel,
+        border: Border(top: BorderSide(color: AppTheme.dividerColor)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            child: Text('RECIENTES',
+                style: AppTheme.orbitron(
+                    size: 10, color: AppTheme.textSecondary)),
+          ),
+          SizedBox(
+            height: 68,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              itemCount: commands.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              itemBuilder: (_, i) {
+                final cmd = commands[i];
+                return GestureDetector(
+                  onTap: () => _processTranscript(cmd.transcript),
+                  child: Container(
+                    width: 180,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: AppTheme.background,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppTheme.dividerColor),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: AppTheme.accent.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(cmd.category,
+                                  style: const TextStyle(
+                                      color: AppTheme.accent,
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.bold)),
+                            ),
+                            const Spacer(),
+                            Text(timeAgo(cmd.timestamp),
+                                style: const TextStyle(
+                                    color: AppTheme.textSecondary,
+                                    fontSize: 9)),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          cmd.transcript,
+                          style: const TextStyle(
+                              color: AppTheme.textSecondary,
+                              fontSize: 11),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
