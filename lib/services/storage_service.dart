@@ -10,6 +10,10 @@ class StorageService {
   static const _prefsKey = 'owner_preferences';
   static const _incidentsKey = 'incidents';
   static const _voiceKey = 'voice_commands';
+  static const _usersKey = 'users';
+  static const _yachtConfigKey = 'yacht_config';
+  static const _pendingVoiceKey = 'pending_voice_messages';
+  static const _scannedDocsKey = 'scanned_documents';
 
   // Tasks
   Future<List<Task>> loadTasks() async {
@@ -119,5 +123,64 @@ class StorageService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(
         _voiceKey, jsonEncode(items.map((e) => e.toJson()).toList()));
+  }
+
+  // Users
+  Future<List<AppUser>> loadUsers() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_usersKey);
+    if (raw == null) return [];
+    return (jsonDecode(raw) as List).map((e) => AppUser.fromJson(e)).toList();
+  }
+
+  Future<void> saveUsers(List<AppUser> items) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+        _usersKey, jsonEncode(items.map((e) => e.toJson()).toList()));
+  }
+
+  // Yacht Config
+  Future<YachtConfig?> loadYachtConfig() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_yachtConfigKey);
+    if (raw == null) return null;
+    return YachtConfig.fromJson(jsonDecode(raw));
+  }
+
+  Future<void> saveYachtConfig(YachtConfig config) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_yachtConfigKey, jsonEncode(config.toJson()));
+  }
+
+  // Pending Voice Messages
+  Future<List<PendingVoiceMessage>> loadPendingVoiceMessages() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_pendingVoiceKey);
+    if (raw == null) return [];
+    return (jsonDecode(raw) as List)
+        .map((e) => PendingVoiceMessage.fromJson(e))
+        .toList();
+  }
+
+  Future<void> savePendingVoiceMessages(List<PendingVoiceMessage> items) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+        _pendingVoiceKey, jsonEncode(items.map((e) => e.toJson()).toList()));
+  }
+
+  // Scanned Documents
+  Future<List<ScannedDocument>> loadScannedDocuments() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_scannedDocsKey);
+    if (raw == null) return [];
+    return (jsonDecode(raw) as List)
+        .map((e) => ScannedDocument.fromJson(e))
+        .toList();
+  }
+
+  Future<void> saveScannedDocuments(List<ScannedDocument> items) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+        _scannedDocsKey, jsonEncode(items.map((e) => e.toJson()).toList()));
   }
 }

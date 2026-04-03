@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_provider.dart';
+import '../services/connectivity_service.dart';
 import 'login_screen.dart';
 import 'crew/my_tasks_screen.dart';
 import 'crew/hey_yat_screen.dart';
@@ -18,6 +19,7 @@ class _CrewHomeState extends State<CrewHome> {
   @override
   Widget build(BuildContext context) {
     final user = context.watch<AppProvider>().currentUser;
+    final isOnline = context.watch<ConnectivityService>().isOnline;
 
     final screens = [
       MyTasksScreen(crewId: user?.id ?? ''),
@@ -26,7 +28,20 @@ class _CrewHomeState extends State<CrewHome> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(user?.name ?? 'Tripulante'),
+        title: Row(
+          children: [
+            Text(user?.name ?? 'Tripulante'),
+            const SizedBox(width: 8),
+            Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: isOnline ? const Color(0xFF10b981) : const Color(0xFFef4444),
+              ),
+            ),
+          ],
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),

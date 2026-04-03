@@ -15,7 +15,7 @@ class DashboardScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('SMART YAT OS'),
+        title: const Text('SmartCrew'),
         leading: Builder(
           builder: (ctx) => IconButton(
             icon: const Icon(Icons.menu),
@@ -72,6 +72,14 @@ class DashboardScreen extends StatelessWidget {
                   color: AppTheme.accent,
                 ),
                 StatCard(
+                  label: 'Tareas Rechazadas',
+                  value: '${p.rejectedTasks}',
+                  icon: Icons.cancel_outlined,
+                  color: p.rejectedTasks > 0
+                      ? AppTheme.errorColor
+                      : AppTheme.successColor,
+                ),
+                StatCard(
                   label: 'Incidencias Abiertas',
                   value: '${p.openIncidents}',
                   icon: Icons.warning_amber_outlined,
@@ -94,6 +102,12 @@ class DashboardScreen extends StatelessWidget {
                   color: p.lowStockItems > 0
                       ? AppTheme.warningColor
                       : AppTheme.successColor,
+                ),
+                StatCard(
+                  label: 'Docs Escaneados',
+                  value: '${p.scannedDocuments.length}',
+                  icon: Icons.document_scanner_outlined,
+                  color: AppTheme.accent,
                 ),
               ],
             ),

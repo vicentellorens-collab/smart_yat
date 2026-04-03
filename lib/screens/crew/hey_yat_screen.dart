@@ -7,7 +7,10 @@ import '../../config/theme.dart';
 import '../../models/models.dart';
 import '../../providers/app_provider.dart';
 import '../../services/ai_service.dart';
+import '../../services/connectivity_service.dart';
+import '../../services/tts_service.dart';
 import '../../widgets/common_widgets.dart';
+import '../../main.dart' show ttsService;
 
 enum _HeyYatState {
   idle,
@@ -36,6 +39,7 @@ class _HeyYatScreenState extends State<HeyYatScreen>
   AiClassificationResult? _result;
   String? _errorMsg;
   bool _showManualInput = false;
+  bool _ttsEnabled = true;
 
   late AnimationController _pulseCtrl;
   late Animation<double> _pulseAnim;
@@ -134,6 +138,27 @@ class _HeyYatScreenState extends State<HeyYatScreen>
   }
 
   Future<void> _processTranscript(String text) async {
+    final isOnline = context.read<ConnectivityService>().isOnline;
+
+    if (!isOnline) {
+      // Queue for later
+      final msg = PendingVoiceMessage(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        transcript: text,
+        recordedAt: DateTime.now(),
+      );
+      await context.read<AppProvider>().addPendingVoiceMessage(msg);
+      if (_ttsEnabled) {
+        await ttsService.speak('Guardado para procesar cuando haya conexión.');
+      }
+      setState(() {
+        _state = _HeyYatState.idle;
+        _transcript = '';
+        _errorMsg = 'Sin conexión. Mensaje guardado en cola offline.';
+      });
+      return;
+    }
+
     setState(() {
       _state = _HeyYatState.processing;
       _transcript = text;
@@ -147,6 +172,9 @@ class _HeyYatScreenState extends State<HeyYatScreen>
           _result = result;
           _state = _HeyYatState.result;
         });
+        if (_ttsEnabled) {
+          await ttsService.speak(result.respuestaUsuario);
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -176,6 +204,10 @@ class _HeyYatScreenState extends State<HeyYatScreen>
 
     await provider.processVoiceCommand(cmd, _result!);
 
+    if (_ttsEnabled) {
+      await ttsService.speak('Guardado correctamente.');
+    }
+
     setState(() {
       _state = _HeyYatState.saved;
       _transcript = '';
@@ -187,6 +219,7 @@ class _HeyYatScreenState extends State<HeyYatScreen>
   }
 
   void _cancel() {
+    ttsService.stop();
     setState(() {
       _state = _HeyYatState.idle;
       _transcript = '';
@@ -205,11 +238,14 @@ class _HeyYatScreenState extends State<HeyYatScreen>
 
   @override
   Widget build(BuildContext context) {
+    final pendingCount = context.watch<AppProvider>().pendingVoiceMessages
+        .where((m) => !m.processed).length;
+
     return Scaffold(
       body: SafeArea(
         child: Column(
           children: [
-            Expanded(child: _buildMain()),
+            Expanded(child: _buildMain(pendingCount)),
             _buildHistory(),
           ],
         ),
@@ -217,20 +253,94 @@ class _HeyYatScreenState extends State<HeyYatScreen>
     );
   }
 
-  Widget _buildMain() {
+  Widget _buildMain(int pendingCount) {
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Title
-          Text('HEY YAT', style: AppTheme.orbitron(size: 20)),
+          // Title row with TTS toggle
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text('HEY YAT', style: AppTheme.orbitron(size: 20)),
+              const SizedBox(width: 12),
+              GestureDetector(
+                onTap: () => setState(() => _ttsEnabled = !_ttsEnabled),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: _ttsEnabled
+                        ? AppTheme.accent.withValues(alpha: 0.15)
+                        : AppTheme.panel,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: _ttsEnabled
+                          ? AppTheme.accent
+                          : AppTheme.dividerColor,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        _ttsEnabled ? Icons.volume_up : Icons.volume_off,
+                        color: _ttsEnabled
+                            ? AppTheme.accent
+                            : AppTheme.textSecondary,
+                        size: 14,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        _ttsEnabled ? 'VOZ ON' : 'VOZ OFF',
+                        style: TextStyle(
+                          color: _ttsEnabled
+                              ? AppTheme.accent
+                              : AppTheme.textSecondary,
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
           const SizedBox(height: 4),
           const Text(
             'Asistente de voz inteligente',
             style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
           ),
-          const SizedBox(height: 40),
+
+          // Offline queue badge
+          if (pendingCount > 0) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppTheme.warningColor.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                    color: AppTheme.warningColor.withValues(alpha: 0.4)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.cloud_off,
+                      color: AppTheme.warningColor, size: 14),
+                  const SizedBox(width: 6),
+                  Text(
+                    '$pendingCount mensaje${pendingCount != 1 ? "s" : ""} en cola',
+                    style: const TextStyle(
+                        color: AppTheme.warningColor, fontSize: 11),
+                  ),
+                ],
+              ),
+            ),
+          ],
+
+          const SizedBox(height: 32),
 
           // Main state content
           _buildStateContent(),
@@ -242,10 +352,10 @@ class _HeyYatScreenState extends State<HeyYatScreen>
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: AppTheme.errorColor.withOpacity(0.1),
+                color: AppTheme.errorColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                    color: AppTheme.errorColor.withOpacity(0.4)),
+                    color: AppTheme.errorColor.withValues(alpha: 0.4)),
               ),
               child: Row(
                 children: [
@@ -335,7 +445,7 @@ class _HeyYatScreenState extends State<HeyYatScreen>
             height: 110,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: AppTheme.accent.withOpacity(0.1),
+              color: AppTheme.accent.withValues(alpha: 0.1),
               border: Border.all(color: AppTheme.accent, width: 2),
             ),
             child: const Icon(Icons.mic_none, color: AppTheme.accent, size: 50),
@@ -377,11 +487,11 @@ class _HeyYatScreenState extends State<HeyYatScreen>
               height: 110,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: AppTheme.errorColor.withOpacity(0.15),
+                color: AppTheme.errorColor.withValues(alpha: 0.15),
                 border: Border.all(color: AppTheme.errorColor, width: 2),
                 boxShadow: [
                   BoxShadow(
-                    color: AppTheme.errorColor.withOpacity(0.3),
+                    color: AppTheme.errorColor.withValues(alpha: 0.3),
                     blurRadius: 20,
                     spreadRadius: 4,
                   ),
@@ -434,7 +544,7 @@ class _HeyYatScreenState extends State<HeyYatScreen>
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(
-                  color: AppTheme.accent.withOpacity(0.5), width: 3),
+                  color: AppTheme.accent.withValues(alpha: 0.5), width: 3),
             ),
             child: const Icon(Icons.auto_awesome,
                 color: AppTheme.accent, size: 36),
@@ -505,7 +615,7 @@ class _HeyYatScreenState extends State<HeyYatScreen>
               color: AppTheme.panel,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                  color: AppTheme.accent.withOpacity(0.4)),
+                  color: AppTheme.accent.withValues(alpha: 0.4)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -565,10 +675,10 @@ class _HeyYatScreenState extends State<HeyYatScreen>
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: AppTheme.successColor.withOpacity(0.08),
+                    color: AppTheme.successColor.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
-                        color: AppTheme.successColor.withOpacity(0.3)),
+                        color: AppTheme.successColor.withValues(alpha: 0.3)),
                   ),
                   child: Row(
                     children: [
@@ -630,14 +740,14 @@ class _HeyYatScreenState extends State<HeyYatScreen>
           height: 90,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: AppTheme.successColor.withOpacity(0.1),
+            color: AppTheme.successColor.withValues(alpha: 0.1),
             border: Border.all(color: AppTheme.successColor, width: 2),
           ),
           child: const Icon(Icons.check,
               color: AppTheme.successColor, size: 44),
         ),
         const SizedBox(height: 20),
-        Text('¡REGISTRADO!',
+        Text('REGISTRADO!',
             style: AppTheme.orbitron(
                 size: 16, color: AppTheme.successColor)),
         const SizedBox(height: 8),
@@ -695,7 +805,7 @@ class _HeyYatScreenState extends State<HeyYatScreen>
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
-                                color: AppTheme.accent.withOpacity(0.1),
+                                color: AppTheme.accent.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(cmd.category,

@@ -2,6 +2,8 @@
 
 enum UserRole { gestor, tripulante }
 
+enum AccountStatus { active, expired, blocked }
+
 enum TaskStatus { pendiente, enProgreso, completada, rechazada }
 
 enum TaskPriority { alta, media, baja }
@@ -20,13 +22,41 @@ class AppUser {
   final String id;
   final String name;
   final UserRole role;
+  final String pin;
+  final bool isAdmin;
+  final String? yachtId;
+  final String? yachtName;
+  final DateTime? accountExpiresAt;
+  final AccountStatus accountStatus;
+  final bool mustChangePIN;
+  final String? email;
 
-  AppUser({required this.id, required this.name, required this.role});
+  AppUser({
+    required this.id,
+    required this.name,
+    required this.role,
+    this.pin = '',
+    this.isAdmin = false,
+    this.yachtId,
+    this.yachtName,
+    this.accountExpiresAt,
+    this.accountStatus = AccountStatus.active,
+    this.mustChangePIN = false,
+    this.email,
+  });
 
   Map<String, dynamic> toJson() => {
         'id': id,
         'name': name,
         'role': role.name,
+        'pin': pin,
+        'isAdmin': isAdmin,
+        'yachtId': yachtId,
+        'yachtName': yachtName,
+        'accountExpiresAt': accountExpiresAt?.toIso8601String(),
+        'accountStatus': accountStatus.name,
+        'mustChangePIN': mustChangePIN,
+        'email': email,
       };
 
   factory AppUser.fromJson(Map<String, dynamic> json) => AppUser(
@@ -36,7 +66,32 @@ class AppUser {
           (e) => e.name == json['role'],
           orElse: () => UserRole.tripulante,
         ),
+        pin: json['pin'] ?? '',
+        isAdmin: json['isAdmin'] ?? false,
+        yachtId: json['yachtId'],
+        yachtName: json['yachtName'],
+        accountExpiresAt: json['accountExpiresAt'] != null
+            ? DateTime.tryParse(json['accountExpiresAt'])
+            : null,
+        accountStatus: AccountStatus.values.firstWhere(
+          (e) => e.name == (json['accountStatus'] ?? 'active'),
+          orElse: () => AccountStatus.active,
+        ),
+        mustChangePIN: json['mustChangePIN'] ?? false,
+        email: json['email'],
       );
+}
+
+// ==================== YACHT CONFIG ====================
+
+class YachtConfig {
+  final String id;
+  final String name;
+  final String adminId;
+  final DateTime createdAt;
+  YachtConfig({required this.id, required this.name, required this.adminId, required this.createdAt});
+  factory YachtConfig.fromJson(Map<String, dynamic> j) => YachtConfig(id: j['id'], name: j['name'], adminId: j['adminId'], createdAt: DateTime.parse(j['createdAt']));
+  Map<String, dynamic> toJson() => {'id': id, 'name': name, 'adminId': adminId, 'createdAt': createdAt.toIso8601String()};
 }
 
 // ==================== TASK ====================
@@ -54,6 +109,10 @@ class Task {
   DateTime? completedAt;
   String? rejectionReason;
 
+  String? completionComment;
+  String? actionBy;
+  DateTime? actionAt;
+
   Task({
     required this.id,
     required this.title,
@@ -66,6 +125,9 @@ class Task {
     this.dueDate,
     this.completedAt,
     this.rejectionReason,
+    this.completionComment,
+    this.actionBy,
+    this.actionAt,
   });
 
   Map<String, dynamic> toJson() => {
@@ -80,6 +142,9 @@ class Task {
         'dueDate': dueDate?.toIso8601String(),
         'completedAt': completedAt?.toIso8601String(),
         'rejectionReason': rejectionReason,
+        'completionComment': completionComment,
+        'actionBy': actionBy,
+        'actionAt': actionAt?.toIso8601String(),
       };
 
   factory Task.fromJson(Map<String, dynamic> json) => Task(
@@ -103,6 +168,9 @@ class Task {
             ? DateTime.parse(json['completedAt'])
             : null,
         rejectionReason: json['rejectionReason'],
+        completionComment: json['completionComment'],
+        actionBy: json['actionBy'],
+        actionAt: json['actionAt'] != null ? DateTime.tryParse(json['actionAt']) : null,
       );
 }
 
@@ -244,6 +312,7 @@ class OwnerPreference {
   bool isPositive;
   String? notes;
   DateTime createdAt;
+  bool viaHeyYat;
 
   OwnerPreference({
     required this.id,
@@ -252,6 +321,7 @@ class OwnerPreference {
     required this.isPositive,
     this.notes,
     required this.createdAt,
+    this.viaHeyYat = false,
   });
 
   Map<String, dynamic> toJson() => {
@@ -261,6 +331,7 @@ class OwnerPreference {
         'isPositive': isPositive,
         'notes': notes,
         'createdAt': createdAt.toIso8601String(),
+        'viaHeyYat': viaHeyYat,
       };
 
   factory OwnerPreference.fromJson(Map<String, dynamic> json) =>
@@ -274,6 +345,7 @@ class OwnerPreference {
         isPositive: json['isPositive'] ?? true,
         notes: json['notes'],
         createdAt: DateTime.parse(json['createdAt']),
+        viaHeyYat: json['viaHeyYat'] ?? false,
       );
 }
 
@@ -402,4 +474,36 @@ class AiClassificationResult {
             Map<String, dynamic>.from(json['datos_extraidos'] ?? {}),
         respuestaUsuario: json['respuesta_usuario'] ?? '',
       );
+}
+
+// ==================== PENDING VOICE MESSAGE ====================
+
+class PendingVoiceMessage {
+  final String id;
+  final String transcript;
+  final DateTime recordedAt;
+  bool processed;
+  String? processingError;
+  PendingVoiceMessage({required this.id, required this.transcript, required this.recordedAt, this.processed = false, this.processingError});
+  factory PendingVoiceMessage.fromJson(Map<String, dynamic> j) => PendingVoiceMessage(id: j['id'], transcript: j['transcript'], recordedAt: DateTime.parse(j['recordedAt']), processed: j['processed'] ?? false, processingError: j['processingError']);
+  Map<String, dynamic> toJson() => {'id': id, 'transcript': transcript, 'recordedAt': recordedAt.toIso8601String(), 'processed': processed, 'processingError': processingError};
+}
+
+// ==================== SCANNED DOCUMENT ====================
+
+class ScannedDocument {
+  final String id;
+  String type;
+  String description;
+  String? holderName;
+  DateTime? issuedAt;
+  DateTime? expiresAt;
+  String status;
+  final List<String> imagePaths;
+  final DateTime scannedAt;
+  final String scannedBy;
+  String? notes;
+  ScannedDocument({required this.id, required this.type, required this.description, this.holderName, this.issuedAt, this.expiresAt, required this.status, required this.imagePaths, required this.scannedAt, required this.scannedBy, this.notes});
+  factory ScannedDocument.fromJson(Map<String, dynamic> j) => ScannedDocument(id: j['id'], type: j['type'], description: j['description'], holderName: j['holderName'], issuedAt: j['issuedAt'] != null ? DateTime.parse(j['issuedAt']) : null, expiresAt: j['expiresAt'] != null ? DateTime.parse(j['expiresAt']) : null, status: j['status'], imagePaths: List<String>.from(j['imagePaths'] ?? []), scannedAt: DateTime.parse(j['scannedAt']), scannedBy: j['scannedBy'], notes: j['notes']);
+  Map<String, dynamic> toJson() => {'id': id, 'type': type, 'description': description, 'holderName': holderName, 'issuedAt': issuedAt?.toIso8601String(), 'expiresAt': expiresAt?.toIso8601String(), 'status': status, 'imagePaths': imagePaths, 'scannedAt': scannedAt.toIso8601String(), 'scannedBy': scannedBy, 'notes': notes};
 }

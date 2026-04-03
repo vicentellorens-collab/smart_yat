@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../config/theme.dart';
 import '../providers/app_provider.dart';
+import '../services/connectivity_service.dart';
 import 'login_screen.dart';
 import 'manager/dashboard_screen.dart';
 import 'manager/tasks_screen.dart';
@@ -9,6 +10,7 @@ import 'manager/crew_screen.dart';
 import 'manager/certificates_screen.dart';
 import 'manager/inventory_screen.dart';
 import 'manager/owner_preferences_screen.dart';
+import 'manager/document_scan_screen.dart';
 
 class ManagerHome extends StatefulWidget {
   const ManagerHome({super.key});
@@ -31,6 +33,7 @@ class _ManagerHomeState extends State<ManagerHome> {
   @override
   Widget build(BuildContext context) {
     final user = context.watch<AppProvider>().currentUser;
+    final isOnline = context.watch<ConnectivityService>().isOnline;
 
     return Scaffold(
       drawer: NavigationDrawer(
@@ -41,16 +44,31 @@ class _ManagerHomeState extends State<ManagerHome> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                CircleAvatar(
-                  radius: 26,
-                  backgroundColor: AppTheme.accent.withOpacity(0.2),
-                  child: Text(
-                    user?.name.isNotEmpty == true ? user!.name[0] : 'G',
-                    style: const TextStyle(
-                        color: AppTheme.accent,
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold),
-                  ),
+                Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 26,
+                      backgroundColor: AppTheme.accent.withValues(alpha: 0.2),
+                      child: Text(
+                        user?.name.isNotEmpty == true ? user!.name[0] : 'G',
+                        style: const TextStyle(
+                            color: AppTheme.accent,
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: isOnline
+                            ? const Color(0xFF10b981)
+                            : const Color(0xFFef4444),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 10),
                 Text(user?.name ?? 'Gestor',
@@ -75,6 +93,18 @@ class _ManagerHomeState extends State<ManagerHome> {
                   context,
                   MaterialPageRoute(
                       builder: (_) => const OwnerPreferencesScreen()));
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.document_scanner_outlined, color: AppTheme.accent),
+            title: const Text('Escanear Documento',
+                style: TextStyle(color: AppTheme.textPrimary)),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const DocumentScanScreen()));
             },
           ),
           const Divider(color: AppTheme.dividerColor),

@@ -1,5 +1,5 @@
 name: smart_yat
-description: "Smart Yat OS - Sistema de gestión inteligente para yates"
+description: "SmartCrew - Intelligent Yacht Crew Management"
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -17,6 +17,12 @@ dependencies:
   intl: ^0.19.0
   google_fonts: ^6.2.0
   permission_handler: ^11.3.0
+  local_auth: ^2.3.0
+  supabase_flutter: ^2.5.0
+  camera: ^0.11.0
+  image_picker: ^1.1.0
+  connectivity_plus: ^6.0.0
+  flutter_tts: ^4.0.0
 
 dev_dependencies:
   flutter_test:

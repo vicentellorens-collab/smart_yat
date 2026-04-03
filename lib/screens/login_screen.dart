@@ -4,8 +4,11 @@ import 'package:google_fonts/google_fonts.dart';
 import '../config/theme.dart';
 import '../models/models.dart';
 import '../providers/app_provider.dart';
+import '../services/auth_service.dart';
 import 'manager_home.dart';
 import 'crew_home.dart';
+
+enum _LoginMode { welcome, register, login }
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -15,51 +18,351 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _nameController = TextEditingController();
-  UserRole? _selectedRole;
-  String? _selectedCrewId;
-  bool _showCrewPicker = false;
+  _LoginMode _mode = _LoginMode.welcome;
+
+  void _goToRegister() => setState(() => _mode = _LoginMode.register);
+  void _goToLogin() => setState(() => _mode = _LoginMode.login);
+  void _goToWelcome() => setState(() => _mode = _LoginMode.welcome);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: SafeArea(
+        child: switch (_mode) {
+          _LoginMode.welcome => _WelcomeView(
+              onRegister: _goToRegister,
+              onLogin: _goToLogin,
+            ),
+          _LoginMode.register => _RegisterView(onBack: _goToWelcome),
+          _LoginMode.login => _LoginView(onBack: _goToWelcome),
+        },
+      ),
+    );
+  }
+}
+
+// ==================== WELCOME ====================
+
+class _WelcomeView extends StatelessWidget {
+  final VoidCallback onRegister;
+  final VoidCallback onLogin;
+  const _WelcomeView({required this.onRegister, required this.onLogin});
+
+  @override
+  Widget build(BuildContext context) {
+    final hasUsers = context.watch<AppProvider>().users.isNotEmpty;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 40),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Spacer(),
+          Container(
+            width: 100,
+            height: 100,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: AppTheme.accent, width: 2),
+              color: AppTheme.panel,
+            ),
+            child: const Icon(Icons.sailing, color: AppTheme.accent, size: 50),
+          ),
+          const SizedBox(height: 28),
+          Text('SmartCrew', style: AppTheme.orbitron(size: 28)),
+          const SizedBox(height: 10),
+          Text(
+            'Enhance your crew.',
+            style: GoogleFonts.exo2(
+              color: AppTheme.textSecondary,
+              fontSize: 15,
+              letterSpacing: 1.5,
+            ),
+          ),
+          const Spacer(),
+          if (hasUsers) ...[
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: onLogin,
+                child: const Text('ACCEDER'),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextButton(
+              onPressed: onRegister,
+              child: Text(
+                'Registrar nuevo yate',
+                style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+              ),
+            ),
+          ] else ...[
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: onRegister,
+                child: const Text('CONFIGURAR YATE'),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextButton(
+              onPressed: onLogin,
+              child: Text(
+                'Ya tengo cuenta',
+                style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+              ),
+            ),
+          ],
+          const SizedBox(height: 20),
+          Text(
+            'v2.0.0 · SmartCrew',
+            style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11),
+          ),
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+}
+
+// ==================== REGISTER ====================
+
+class _RegisterView extends StatefulWidget {
+  final VoidCallback onBack;
+  const _RegisterView({required this.onBack});
+
+  @override
+  State<_RegisterView> createState() => _RegisterViewState();
+}
+
+class _RegisterViewState extends State<_RegisterView> {
+  final _nameCtrl = TextEditingController();
+  final _yachtCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController();
+  final _pinCtrl = TextEditingController();
+  final _confirmPinCtrl = TextEditingController();
+  bool _loading = false;
 
   @override
   void dispose() {
-    _nameController.dispose();
+    _nameCtrl.dispose();
+    _yachtCtrl.dispose();
+    _emailCtrl.dispose();
+    _pinCtrl.dispose();
+    _confirmPinCtrl.dispose();
     super.dispose();
   }
 
-  void _selectRole(UserRole role) {
-    setState(() {
-      _selectedRole = role;
-      _showCrewPicker = role == UserRole.tripulante;
-      _selectedCrewId = null;
-      _nameController.clear();
-    });
-  }
+  Future<void> _register() async {
+    final name = _nameCtrl.text.trim();
+    final yacht = _yachtCtrl.text.trim();
+    final pin = _pinCtrl.text.trim();
+    final confirm = _confirmPinCtrl.text.trim();
 
-  void _login() {
-    final provider = context.read<AppProvider>();
-    String name = _nameController.text.trim();
-
-    if (_selectedRole == UserRole.tripulante && _selectedCrewId != null) {
-      final member = provider.crew.firstWhere((c) => c.id == _selectedCrewId);
-      name = member.name;
+    if (name.isEmpty || yacht.isEmpty || pin.isEmpty) {
+      _snack('Completa todos los campos obligatorios');
+      return;
     }
-
-    if (name.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Introduce tu nombre para continuar')),
-      );
+    if (pin.length < 4) {
+      _snack('El PIN debe tener al menos 4 dígitos');
+      return;
+    }
+    if (pin != confirm) {
+      _snack('Los PINs no coinciden');
       return;
     }
 
-    final user = AppUser(
-      id: _selectedCrewId ?? DateTime.now().millisecondsSinceEpoch.toString(),
+    setState(() => _loading = true);
+    final provider = context.read<AppProvider>();
+    final error = await provider.registerAdmin(
       name: name,
-      role: _selectedRole!,
+      pin: pin,
+      yachtName: yacht,
+      email: _emailCtrl.text.trim().isEmpty ? null : _emailCtrl.text.trim(),
     );
-    provider.login(user);
+    setState(() => _loading = false);
 
+    if (error != null) {
+      _snack(error);
+      return;
+    }
+
+    _snack('Yate registrado correctamente. Ahora accede con tu PIN.');
+    widget.onBack();
+  }
+
+  void _snack(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.arrow_back, color: AppTheme.accent),
+                onPressed: widget.onBack,
+              ),
+              const SizedBox(width: 8),
+              Text('REGISTRAR YATE', style: AppTheme.orbitron(size: 16)),
+            ],
+          ),
+          const SizedBox(height: 24),
+          Text('DATOS DEL ADMINISTRADOR',
+              style: AppTheme.orbitron(size: 11, color: AppTheme.textSecondary)),
+          const SizedBox(height: 14),
+          TextField(
+            controller: _nameCtrl,
+            style: const TextStyle(color: AppTheme.textPrimary),
+            decoration: const InputDecoration(
+              labelText: 'Tu nombre *',
+              prefixIcon: Icon(Icons.person_outline, color: AppTheme.textSecondary),
+            ),
+            textCapitalization: TextCapitalization.words,
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _emailCtrl,
+            style: const TextStyle(color: AppTheme.textPrimary),
+            decoration: const InputDecoration(
+              labelText: 'Email (opcional)',
+              prefixIcon: Icon(Icons.email_outlined, color: AppTheme.textSecondary),
+            ),
+            keyboardType: TextInputType.emailAddress,
+          ),
+          const SizedBox(height: 20),
+          Text('DATOS DEL YATE',
+              style: AppTheme.orbitron(size: 11, color: AppTheme.textSecondary)),
+          const SizedBox(height: 14),
+          TextField(
+            controller: _yachtCtrl,
+            style: const TextStyle(color: AppTheme.textPrimary),
+            decoration: const InputDecoration(
+              labelText: 'Nombre del yate *',
+              prefixIcon: Icon(Icons.sailing, color: AppTheme.textSecondary),
+            ),
+            textCapitalization: TextCapitalization.words,
+          ),
+          const SizedBox(height: 20),
+          Text('PIN DE ACCESO',
+              style: AppTheme.orbitron(size: 11, color: AppTheme.textSecondary)),
+          const SizedBox(height: 14),
+          TextField(
+            controller: _pinCtrl,
+            style: const TextStyle(color: AppTheme.textPrimary),
+            decoration: const InputDecoration(
+              labelText: 'PIN (mín. 4 dígitos) *',
+              prefixIcon: Icon(Icons.lock_outline, color: AppTheme.textSecondary),
+            ),
+            keyboardType: TextInputType.number,
+            obscureText: true,
+            maxLength: 6,
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _confirmPinCtrl,
+            style: const TextStyle(color: AppTheme.textPrimary),
+            decoration: const InputDecoration(
+              labelText: 'Confirmar PIN *',
+              prefixIcon: Icon(Icons.lock_outline, color: AppTheme.textSecondary),
+            ),
+            keyboardType: TextInputType.number,
+            obscureText: true,
+            maxLength: 6,
+          ),
+          const SizedBox(height: 28),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _loading ? null : _register,
+              child: _loading
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('REGISTRAR'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ==================== LOGIN ====================
+
+class _LoginView extends StatefulWidget {
+  final VoidCallback onBack;
+  const _LoginView({required this.onBack});
+
+  @override
+  State<_LoginView> createState() => _LoginViewState();
+}
+
+class _LoginViewState extends State<_LoginView> {
+  AppUser? _selectedUser;
+  String _pin = '';
+  String? _error;
+
+  void _selectUser(AppUser user) {
+    setState(() {
+      _selectedUser = user;
+      _pin = '';
+      _error = null;
+    });
+  }
+
+  void _onNumpad(String digit) {
+    if (_pin.length >= 6) return;
+    setState(() {
+      _pin += digit;
+      _error = null;
+    });
+    if (_pin.length >= 4) {
+      _tryLogin();
+    }
+  }
+
+  void _onDelete() {
+    if (_pin.isEmpty) return;
+    setState(() => _pin = _pin.substring(0, _pin.length - 1));
+  }
+
+  void _tryLogin() {
+    if (_selectedUser == null) return;
+    final provider = context.read<AppProvider>();
+
+    if (_selectedUser!.accountStatus == AccountStatus.blocked) {
+      setState(() => _error = 'Cuenta bloqueada. Contacta al administrador.');
+      _pin = '';
+      return;
+    }
+
+    if (_selectedUser!.accountExpiresAt != null &&
+        _selectedUser!.accountExpiresAt!.isBefore(DateTime.now())) {
+      setState(() => _error = 'Cuenta expirada. Contacta al administrador.');
+      _pin = '';
+      return;
+    }
+
+    final verified = AuthService.verifyPin(_pin, _selectedUser!.pin);
+    if (!verified) {
+      setState(() {
+        _error = 'PIN incorrecto';
+        _pin = '';
+      });
+      return;
+    }
+
+    provider.login(_selectedUser!);
     Navigator.of(context).pushReplacement(MaterialPageRoute(
-      builder: (_) => _selectedRole == UserRole.gestor
+      builder: (_) => _selectedUser!.role == UserRole.gestor
           ? const ManagerHome()
           : const CrewHome(),
     ));
@@ -67,168 +370,195 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final crew = context.watch<AppProvider>().crew;
+    final users = context.watch<AppProvider>().users;
 
-    return Scaffold(
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 40),
-          child: Column(
+    if (_selectedUser == null) {
+      return _buildUserPicker(users);
+    }
+    return _buildPinPad();
+  }
+
+  Widget _buildUserPicker(List<AppUser> users) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              const SizedBox(height: 20),
-              // Logo / Icon
-              Container(
-                width: 90,
-                height: 90,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: AppTheme.accent, width: 2),
-                  color: AppTheme.panel,
-                ),
-                child: const Icon(Icons.sailing, color: AppTheme.accent, size: 44),
+              IconButton(
+                icon: const Icon(Icons.arrow_back, color: AppTheme.accent),
+                onPressed: widget.onBack,
               ),
-              const SizedBox(height: 20),
-              Text('SMART YAT OS', style: AppTheme.orbitron(size: 22)),
-              const SizedBox(height: 6),
-              Text(
-                'Sistema de Gestión Inteligente',
-                style: GoogleFonts.exo2(
-                  color: AppTheme.textSecondary,
-                  fontSize: 13,
-                  letterSpacing: 1.2,
-                ),
-              ),
-              const SizedBox(height: 48),
-
-              // Role selector
-              Text('SELECCIONA TU PERFIL',
-                  style: AppTheme.orbitron(size: 11, color: AppTheme.textSecondary)),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: _RoleButton(
-                      label: 'GESTOR',
-                      sublabel: 'Capitán / Oficial',
-                      icon: Icons.manage_accounts_outlined,
-                      selected: _selectedRole == UserRole.gestor,
-                      onTap: () => _selectRole(UserRole.gestor),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _RoleButton(
-                      label: 'TRIPULANTE',
-                      sublabel: 'Crew',
-                      icon: Icons.person_outlined,
-                      selected: _selectedRole == UserRole.tripulante,
-                      onTap: () => _selectRole(UserRole.tripulante),
-                    ),
-                  ),
-                ],
-              ),
-
-              if (_selectedRole != null) ...[
-                const SizedBox(height: 28),
-                if (_showCrewPicker && crew.isNotEmpty) ...[
-                  Text('¿QUIÉN ERES?',
-                      style: AppTheme.orbitron(size: 11, color: AppTheme.textSecondary)),
-                  const SizedBox(height: 12),
-                  ...crew.map((c) => _CrewTile(
-                        member: c,
-                        selected: _selectedCrewId == c.id,
-                        onTap: () => setState(() => _selectedCrewId = c.id),
-                      )),
-                  const SizedBox(height: 12),
-                  Text('o introduce tu nombre',
-                      style: const TextStyle(
-                          color: AppTheme.textSecondary, fontSize: 12)),
-                  const SizedBox(height: 8),
-                ],
-                if (!_showCrewPicker || _selectedCrewId == null) ...[
-                  Text('TU NOMBRE',
-                      style: AppTheme.orbitron(size: 11, color: AppTheme.textSecondary)),
-                  const SizedBox(height: 10),
-                ],
-                if (_selectedCrewId == null)
-                  TextField(
-                    controller: _nameController,
-                    style: const TextStyle(color: AppTheme.textPrimary),
-                    decoration: const InputDecoration(
-                      hintText: 'Ej: Carlos Ruiz',
-                      prefixIcon: Icon(Icons.person_outline, color: AppTheme.textSecondary),
-                    ),
-                    textCapitalization: TextCapitalization.words,
-                  ),
-                const SizedBox(height: 28),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: _login,
-                    icon: const Icon(Icons.login),
-                    label: const Text('ACCEDER'),
-                  ),
-                ),
-              ],
-              const SizedBox(height: 40),
-              Text(
-                'v1.0.0 · Smart Yat OS',
-                style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11),
-              ),
+              const SizedBox(width: 8),
+              Text('ACCEDER', style: AppTheme.orbitron(size: 16)),
             ],
           ),
-        ),
+          const SizedBox(height: 24),
+          Text('SELECCIONA TU PERFIL',
+              style: AppTheme.orbitron(size: 11, color: AppTheme.textSecondary)),
+          const SizedBox(height: 16),
+          if (users.isEmpty)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.all(32),
+                child: Text(
+                  'No hay usuarios registrados.\nRegistra un yate primero.',
+                  style: TextStyle(color: AppTheme.textSecondary),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            )
+          else
+            ...users.map((u) => _UserTile(
+                  user: u,
+                  onTap: () => _selectUser(u),
+                )),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPinPad() {
+    final user = _selectedUser!;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.arrow_back, color: AppTheme.accent),
+                onPressed: () => setState(() {
+                  _selectedUser = null;
+                  _pin = '';
+                  _error = null;
+                }),
+              ),
+              const SizedBox(width: 8),
+              Text('INTRODUCE TU PIN', style: AppTheme.orbitron(size: 14)),
+            ],
+          ),
+          const SizedBox(height: 32),
+          CircleAvatar(
+            radius: 32,
+            backgroundColor: AppTheme.accent.withValues(alpha: 0.2),
+            child: Text(
+              user.name[0],
+              style: const TextStyle(
+                  color: AppTheme.accent,
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(user.name,
+              style: const TextStyle(
+                  color: AppTheme.textPrimary,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600)),
+          Text(
+            user.role == UserRole.gestor ? 'Gestor / Capitán' : 'Tripulante',
+            style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+          ),
+          const SizedBox(height: 32),
+          // PIN dots
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(
+              6,
+              (i) => Container(
+                margin: const EdgeInsets.symmetric(horizontal: 6),
+                width: 14,
+                height: 14,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: i < _pin.length
+                      ? AppTheme.accent
+                      : AppTheme.dividerColor,
+                  border: Border.all(
+                    color: i < _pin.length ? AppTheme.accent : AppTheme.textSecondary,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          if (_error != null) ...[
+            const SizedBox(height: 12),
+            Text(_error!,
+                style: const TextStyle(color: AppTheme.errorColor, fontSize: 12)),
+          ],
+          const SizedBox(height: 32),
+          // Numpad
+          _NumPad(
+            onDigit: _onNumpad,
+            onDelete: _onDelete,
+          ),
+        ],
       ),
     );
   }
 }
 
-class _RoleButton extends StatelessWidget {
-  final String label;
-  final String sublabel;
-  final IconData icon;
-  final bool selected;
+class _UserTile extends StatelessWidget {
+  final AppUser user;
   final VoidCallback onTap;
-
-  const _RoleButton({
-    required this.label,
-    required this.sublabel,
-    required this.icon,
-    required this.selected,
-    required this.onTap,
-  });
+  const _UserTile({required this.user, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
+    final isBlocked = user.accountStatus == AccountStatus.blocked;
+    final isExpired = user.accountExpiresAt != null &&
+        user.accountExpiresAt!.isBefore(DateTime.now());
+
     return GestureDetector(
       onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 12),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: selected
-              ? AppTheme.accent.withOpacity(0.15)
-              : AppTheme.panel,
-          borderRadius: BorderRadius.circular(14),
+          color: AppTheme.panel,
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: selected ? AppTheme.accent : AppTheme.dividerColor,
-            width: selected ? 1.5 : 1,
+            color: isBlocked || isExpired
+                ? AppTheme.errorColor.withValues(alpha: 0.4)
+                : AppTheme.dividerColor,
           ),
         ),
-        child: Column(
+        child: Row(
           children: [
-            Icon(icon,
-                color: selected ? AppTheme.accent : AppTheme.textSecondary,
-                size: 32),
-            const SizedBox(height: 8),
-            Text(label,
-                style: AppTheme.orbitron(
-                    size: 12,
-                    color: selected ? AppTheme.accent : AppTheme.textPrimary)),
-            const SizedBox(height: 2),
-            Text(sublabel,
+            CircleAvatar(
+              radius: 20,
+              backgroundColor: AppTheme.accent.withValues(alpha: 0.2),
+              child: Text(
+                user.name[0],
                 style: const TextStyle(
-                    color: AppTheme.textSecondary, fontSize: 11)),
+                    color: AppTheme.accent, fontWeight: FontWeight.bold),
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(user.name,
+                      style: const TextStyle(
+                          color: AppTheme.textPrimary,
+                          fontWeight: FontWeight.w600)),
+                  Text(
+                    user.role == UserRole.gestor ? 'Gestor' : 'Tripulante',
+                    style: const TextStyle(
+                        color: AppTheme.textSecondary, fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+            if (isBlocked)
+              _StatusBadge('BLOQUEADO', AppTheme.errorColor)
+            else if (isExpired)
+              _StatusBadge('EXPIRADO', AppTheme.warningColor)
+            else
+              const Icon(Icons.chevron_right, color: AppTheme.textSecondary),
           ],
         ),
       ),
@@ -236,58 +566,90 @@ class _RoleButton extends StatelessWidget {
   }
 }
 
-class _CrewTile extends StatelessWidget {
-  final CrewMember member;
-  final bool selected;
+class _StatusBadge extends StatelessWidget {
+  final String label;
+  final Color color;
+  const _StatusBadge(this.label, this.color);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(label,
+          style: TextStyle(
+              color: color, fontSize: 10, fontWeight: FontWeight.bold)),
+    );
+  }
+}
+
+class _NumPad extends StatelessWidget {
+  final void Function(String) onDigit;
+  final VoidCallback onDelete;
+  const _NumPad({required this.onDigit, required this.onDelete});
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = [
+      ['1', '2', '3'],
+      ['4', '5', '6'],
+      ['7', '8', '9'],
+      ['', '0', 'del'],
+    ];
+
+    return Column(
+      children: rows.map((row) {
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: row.map((key) {
+            if (key.isEmpty) {
+              return const SizedBox(width: 80, height: 64);
+            }
+            if (key == 'del') {
+              return _NumPadKey(
+                child: const Icon(Icons.backspace_outlined,
+                    color: AppTheme.textSecondary, size: 22),
+                onTap: onDelete,
+              );
+            }
+            return _NumPadKey(
+              child: Text(key,
+                  style: const TextStyle(
+                      color: AppTheme.textPrimary,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w500)),
+              onTap: () => onDigit(key),
+            );
+          }).toList(),
+        );
+      }).toList(),
+    );
+  }
+}
+
+class _NumPadKey extends StatelessWidget {
+  final Widget child;
   final VoidCallback onTap;
-  const _CrewTile(
-      {required this.member, required this.selected, required this.onTap});
+  const _NumPadKey({required this.child, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        width: 80,
+        height: 64,
+        margin: const EdgeInsets.all(4),
         decoration: BoxDecoration(
-          color: selected
-              ? AppTheme.accent.withOpacity(0.12)
-              : AppTheme.panel,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: selected ? AppTheme.accent : AppTheme.dividerColor,
-          ),
+          color: AppTheme.panel,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppTheme.dividerColor),
         ),
-        child: Row(
-          children: [
-            CircleAvatar(
-              radius: 18,
-              backgroundColor: AppTheme.accent.withOpacity(0.2),
-              child: Text(
-                member.name[0],
-                style: const TextStyle(
-                    color: AppTheme.accent, fontWeight: FontWeight.bold),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(member.name,
-                    style: const TextStyle(
-                        color: AppTheme.textPrimary,
-                        fontWeight: FontWeight.w600)),
-                Text(member.role,
-                    style: const TextStyle(
-                        color: AppTheme.textSecondary, fontSize: 12)),
-              ],
-            ),
-            const Spacer(),
-            if (selected)
-              const Icon(Icons.check_circle, color: AppTheme.accent, size: 20),
-          ],
-        ),
+        alignment: Alignment.center,
+        child: child,
       ),
     );
   }

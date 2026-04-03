@@ -47,7 +47,7 @@ class MyTasksScreen extends StatelessWidget {
             color: AppTheme.panel,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-                color: AppTheme.accent.withOpacity(0.3)),
+                color: AppTheme.accent.withValues(alpha: 0.3)),
           ),
           child: Row(
             children: [
@@ -112,7 +112,7 @@ class _ActiveTaskCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: task.priority == TaskPriority.alta
-              ? AppTheme.errorColor.withOpacity(0.5)
+              ? AppTheme.errorColor.withValues(alpha: 0.5)
               : AppTheme.dividerColor,
         ),
       ),
@@ -155,17 +155,7 @@ class _ActiveTaskCard extends StatelessWidget {
               const SizedBox(width: 10),
               Expanded(
                 child: ElevatedButton.icon(
-                  onPressed: () {
-                    task.status = TaskStatus.completada;
-                    task.completedAt = DateTime.now();
-                    context.read<AppProvider>().updateTask(task);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('✓ Tarea completada'),
-                        backgroundColor: AppTheme.successColor,
-                      ),
-                    );
-                  },
+                  onPressed: () => _complete(context, task),
                   icon: const Icon(Icons.check, size: 16),
                   label: const Text('Completar'),
                   style: ElevatedButton.styleFrom(
@@ -182,20 +172,30 @@ class _ActiveTaskCard extends StatelessWidget {
     );
   }
 
-  void _reject(BuildContext context, Task task) {
+  void _complete(BuildContext context, Task task) {
     final ctrl = TextEditingController();
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: Text('Rechazar tarea', style: AppTheme.orbitron(size: 14)),
-        content: TextField(
-          controller: ctrl,
-          style: const TextStyle(color: AppTheme.textPrimary),
-          decoration: const InputDecoration(
-            labelText: 'Motivo del rechazo',
-            hintText: 'Ej: Falta material, no es mi área...',
-          ),
-          maxLines: 2,
+        title: Text('Completar tarea', style: AppTheme.orbitron(size: 14)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(task.title,
+                style: const TextStyle(
+                    color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 12),
+            TextField(
+              controller: ctrl,
+              style: const TextStyle(color: AppTheme.textPrimary),
+              decoration: const InputDecoration(
+                labelText: 'Comentario de finalización (requerido)',
+                hintText: 'Ej: Tarea completada sin incidencias',
+              ),
+              maxLines: 2,
+            ),
+          ],
         ),
         actions: [
           TextButton(
@@ -204,10 +204,76 @@ class _ActiveTaskCard extends StatelessWidget {
           ),
           TextButton(
             onPressed: () {
-              task.status = TaskStatus.rechazada;
-              task.rejectionReason =
-                  ctrl.text.trim().isEmpty ? 'Sin motivo' : ctrl.text.trim();
-              context.read<AppProvider>().updateTask(task);
+              final comment = ctrl.text.trim();
+              if (comment.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('El comentario es obligatorio'),
+                    backgroundColor: AppTheme.warningColor,
+                  ),
+                );
+                return;
+              }
+              context.read<AppProvider>().completeTask(task.id, comment);
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Tarea completada'),
+                  backgroundColor: AppTheme.successColor,
+                ),
+              );
+            },
+            style: TextButton.styleFrom(foregroundColor: AppTheme.successColor),
+            child: const Text('Confirmar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _reject(BuildContext context, Task task) {
+    final ctrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text('Rechazar tarea', style: AppTheme.orbitron(size: 14)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(task.title,
+                style: const TextStyle(
+                    color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 12),
+            TextField(
+              controller: ctrl,
+              style: const TextStyle(color: AppTheme.textPrimary),
+              decoration: const InputDecoration(
+                labelText: 'Motivo del rechazo (requerido)',
+                hintText: 'Ej: Falta material, no es mi área...',
+              ),
+              maxLines: 2,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () {
+              final reason = ctrl.text.trim();
+              if (reason.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('El motivo es obligatorio'),
+                    backgroundColor: AppTheme.warningColor,
+                  ),
+                );
+                return;
+              }
+              context.read<AppProvider>().rejectTask(task.id, reason);
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
@@ -236,35 +302,74 @@ class _DoneTaskCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppTheme.panel.withOpacity(0.6),
+        color: AppTheme.panel.withValues(alpha: 0.6),
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: AppTheme.dividerColor),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            task.status == TaskStatus.completada
-                ? Icons.check_circle_outline
-                : Icons.cancel_outlined,
-            color: task.status == TaskStatus.completada
-                ? AppTheme.successColor
-                : AppTheme.errorColor,
-            size: 18,
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              task.title,
-              style: TextStyle(
-                color: AppTheme.textSecondary,
-                fontSize: 13,
-                decoration: task.status == TaskStatus.completada
-                    ? TextDecoration.lineThrough
-                    : null,
+          Row(
+            children: [
+              Icon(
+                task.status == TaskStatus.completada
+                    ? Icons.check_circle_outline
+                    : Icons.cancel_outlined,
+                color: task.status == TaskStatus.completada
+                    ? AppTheme.successColor
+                    : AppTheme.errorColor,
+                size: 18,
               ),
-            ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  task.title,
+                  style: TextStyle(
+                    color: AppTheme.textSecondary,
+                    fontSize: 13,
+                    decoration: task.status == TaskStatus.completada
+                        ? TextDecoration.lineThrough
+                        : null,
+                  ),
+                ),
+              ),
+              TaskStatusChip(task.status),
+            ],
           ),
-          TaskStatusChip(task.status),
+          if (task.completionComment != null && task.completionComment!.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                const Icon(Icons.comment_outlined,
+                    color: AppTheme.successColor, size: 12),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    task.completionComment!,
+                    style: const TextStyle(
+                        color: AppTheme.successColor, fontSize: 11),
+                  ),
+                ),
+              ],
+            ),
+          ],
+          if (task.rejectionReason != null && task.rejectionReason!.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                const Icon(Icons.info_outline,
+                    color: AppTheme.errorColor, size: 12),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    task.rejectionReason!,
+                    style: const TextStyle(
+                        color: AppTheme.errorColor, fontSize: 11),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );

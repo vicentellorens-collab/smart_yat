@@ -1,9 +1,14 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/models.dart';
 import '../services/storage_service.dart';
+import '../services/auth_service.dart';
+import '../services/connectivity_service.dart';
+import '../services/supabase_service.dart';
 
 class AppProvider extends ChangeNotifier {
   final StorageService _storage = StorageService();
+  final SupabaseService _cloud = SupabaseService();
 
   AppUser? _currentUser;
   List<Task> _tasks = [];
@@ -13,7 +18,14 @@ class AppProvider extends ChangeNotifier {
   List<OwnerPreference> _ownerPreferences = [];
   List<Incident> _incidents = [];
   List<VoiceCommand> _voiceCommands = [];
+  List<AppUser> _users = [];
+  YachtConfig? _yachtConfig;
+  List<PendingVoiceMessage> _pendingVoiceMessages = [];
+  List<ScannedDocument> _scannedDocuments = [];
+  ConnectivityService? _connectivityService;
   bool _isLoading = false;
+  bool _isSyncing = false;
+  DateTime? _lastSyncAt;
 
   // Getters
   AppUser? get currentUser => _currentUser;
@@ -24,7 +36,14 @@ class AppProvider extends ChangeNotifier {
   List<OwnerPreference> get ownerPreferences => _ownerPreferences;
   List<Incident> get incidents => _incidents;
   List<VoiceCommand> get voiceCommands => _voiceCommands;
+  List<AppUser> get users => _users;
+  YachtConfig? get yachtConfig => _yachtConfig;
+  List<PendingVoiceMessage> get pendingVoiceMessages => _pendingVoiceMessages;
+  List<ScannedDocument> get scannedDocuments => _scannedDocuments;
+  ConnectivityService? get connectivityService => _connectivityService;
   bool get isLoading => _isLoading;
+  bool get isSyncing => _isSyncing;
+  DateTime? get lastSyncAt => _lastSyncAt;
 
   // Computed stats
   int get activeTasks => _tasks
@@ -42,12 +61,28 @@ class AppProvider extends ChangeNotifier {
   int get lowStockItems =>
       _inventory.where((i) => i.status != InventoryStatus.ok).length;
 
+  int get rejectedTasks =>
+      _tasks.where((t) => t.status == TaskStatus.rechazada).length;
+
   // ==================== INIT ====================
+
+  void setConnectivityService(ConnectivityService service) {
+    _connectivityService = service;
+    // Sincronizar automáticamente al recuperar conexión
+    service.addListener(_onConnectivityChanged);
+  }
+
+  void _onConnectivityChanged() {
+    if (_connectivityService?.isOnline == true && _yachtConfig != null) {
+      syncWithCloud();
+    }
+  }
 
   Future<void> initialize() async {
     _isLoading = true;
     notifyListeners();
 
+    // 1. Carga local primero (instantánea)
     _tasks = await _storage.loadTasks();
     _crew = await _storage.loadCrew();
     _certificates = await _storage.loadCertificates();
@@ -55,6 +90,10 @@ class AppProvider extends ChangeNotifier {
     _ownerPreferences = await _storage.loadOwnerPreferences();
     _incidents = await _storage.loadIncidents();
     _voiceCommands = await _storage.loadVoiceCommands();
+    _users = await _storage.loadUsers();
+    _yachtConfig = await _storage.loadYachtConfig();
+    _pendingVoiceMessages = await _storage.loadPendingVoiceMessages();
+    _scannedDocuments = await _storage.loadScannedDocuments();
 
     if (_crew.isEmpty) {
       _loadDemoData();
@@ -62,6 +101,80 @@ class AppProvider extends ChangeNotifier {
 
     _isLoading = false;
     notifyListeners();
+
+    // 2. Pull desde Supabase en segundo plano si hay conexión
+    if (_yachtConfig != null &&
+        _connectivityService?.isOnline != false) {
+      syncWithCloud();
+    }
+  }
+
+  /// Sincronización bidireccional con Supabase.
+  /// Estrategia: pull desde nube → merge con local (nube gana en conflictos) → save local.
+  Future<void> syncWithCloud() async {
+    final yachtId = _yachtConfig?.id;
+    if (yachtId == null) return;
+
+    _isSyncing = true;
+    notifyListeners();
+
+    try {
+      final snapshot = await _cloud.pullAll(yachtId);
+
+      if (snapshot != null) {
+        // Merge: la nube tiene prioridad sobre local para datos compartidos.
+        // Los datos locales que no están en la nube se suben.
+        _mergeFromCloud(snapshot);
+        await _saveAllLocal();
+      }
+
+      // Sube datos locales que puedan faltar en la nube
+      await _cloud.pushAll(
+        yacht: _yachtConfig!,
+        users: _users,
+        tasks: _tasks,
+        crew: _crew,
+        certificates: _certificates,
+        inventory: _inventory,
+        preferences: _ownerPreferences,
+        incidents: _incidents,
+        voiceCommands: _voiceCommands,
+        pendingMessages: _pendingVoiceMessages,
+        scannedDocuments: _scannedDocuments,
+        currentUserId: _currentUser?.id,
+      );
+
+      _lastSyncAt = DateTime.now();
+    } catch (_) {
+      // Sync falla silenciosamente — la app sigue funcionando offline
+    }
+
+    _isSyncing = false;
+    notifyListeners();
+  }
+
+  void _mergeFromCloud(CloudSnapshot snap) {
+    // Para cada entidad: si la nube tiene registros, reemplaza local.
+    // Si la nube está vacía (primer sync desde este dispositivo), mantiene local.
+    if (snap.tasks.isNotEmpty) _tasks = snap.tasks;
+    if (snap.crew.isNotEmpty) _crew = snap.crew;
+    if (snap.certificates.isNotEmpty) _certificates = snap.certificates;
+    if (snap.inventory.isNotEmpty) _inventory = snap.inventory;
+    if (snap.preferences.isNotEmpty) _ownerPreferences = snap.preferences;
+    if (snap.incidents.isNotEmpty) _incidents = snap.incidents;
+    if (snap.voiceCommands.isNotEmpty) _voiceCommands = snap.voiceCommands;
+    if (snap.users.isNotEmpty) _users = snap.users;
+
+    // Mensajes pendientes: merge por ID para no perder los locales
+    final cloudPvmIds = snap.pendingMessages.map((m) => m.id).toSet();
+    final localOnly = _pendingVoiceMessages
+        .where((m) => !cloudPvmIds.contains(m.id))
+        .toList();
+    _pendingVoiceMessages = [...snap.pendingMessages, ...localOnly];
+
+    if (snap.scannedDocuments.isNotEmpty) {
+      _scannedDocuments = snap.scannedDocuments;
+    }
   }
 
   void _loadDemoData() {
@@ -291,11 +404,11 @@ class AppProvider extends ChangeNotifier {
       ),
     ];
 
-    _saveAll();
+    _saveAllLocal();
     notifyListeners();
   }
 
-  Future<void> _saveAll() async {
+  Future<void> _saveAllLocal() async {
     await Future.wait([
       _storage.saveTasks(_tasks),
       _storage.saveCrew(_crew),
@@ -304,6 +417,9 @@ class AppProvider extends ChangeNotifier {
       _storage.saveOwnerPreferences(_ownerPreferences),
       _storage.saveIncidents(_incidents),
       _storage.saveVoiceCommands(_voiceCommands),
+      _storage.saveUsers(_users),
+      _storage.savePendingVoiceMessages(_pendingVoiceMessages),
+      _storage.saveScannedDocuments(_scannedDocuments),
     ]);
   }
 
@@ -319,11 +435,192 @@ class AppProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<String?> registerAdmin({
+    required String name,
+    required String pin,
+    required String yachtName,
+    String? email,
+  }) async {
+    final hashedPin = AuthService.hashPin(pin);
+    final id = DateTime.now().millisecondsSinceEpoch.toString();
+    final yachtId = 'y_$id';
+
+    final yachtCfg = YachtConfig(
+      id: yachtId,
+      name: yachtName,
+      adminId: id,
+      createdAt: DateTime.now(),
+    );
+
+    final admin = AppUser(
+      id: id,
+      name: name,
+      role: UserRole.gestor,
+      pin: hashedPin,
+      isAdmin: true,
+      yachtId: yachtId,
+      yachtName: yachtName,
+      accountStatus: AccountStatus.active,
+      email: email,
+    );
+
+    _users.add(admin);
+    _yachtConfig = yachtCfg;
+    await _storage.saveUsers(_users);
+    await _storage.saveYachtConfig(yachtCfg);
+    // Sync cloud
+    unawaited(_cloud.upsertYacht(yachtCfg));
+    unawaited(_cloud.upsertUser(admin));
+    notifyListeners();
+    return null;
+  }
+
+  AppUser? loginWithPIN(String identifier, String pin) {
+    final user = _users.where((u) => u.name.toLowerCase() == identifier.toLowerCase()).firstOrNull;
+    if (user == null) return null;
+    if (!AuthService.verifyPin(pin, user.pin)) return null;
+    if (user.accountStatus == AccountStatus.blocked) return null;
+    if (user.accountExpiresAt != null && user.accountExpiresAt!.isBefore(DateTime.now())) return null;
+    _currentUser = user;
+    notifyListeners();
+    return user;
+  }
+
+  Future<void> createCrewMember({
+    required String name,
+    required String role,
+    required String pin,
+    DateTime? accountExpiresAt,
+    String? email,
+    String? notes,
+  }) async {
+    final id = DateTime.now().millisecondsSinceEpoch.toString();
+    final hashedPin = AuthService.hashPin(pin);
+
+    final user = AppUser(
+      id: id,
+      name: name,
+      role: UserRole.tripulante,
+      pin: hashedPin,
+      isAdmin: false,
+      yachtId: _yachtConfig?.id,
+      yachtName: _yachtConfig?.name,
+      accountExpiresAt: accountExpiresAt,
+      accountStatus: AccountStatus.active,
+      email: email,
+    );
+
+    final member = CrewMember(
+      id: id,
+      name: name,
+      role: role,
+      notes: notes,
+    );
+
+    _users.add(user);
+    _crew.add(member);
+    await _storage.saveUsers(_users);
+    await _storage.saveCrew(_crew);
+    // Sync cloud
+    unawaited(_cloud.upsertUser(user));
+    if (_yachtConfig != null) {
+      unawaited(_cloud.upsertCrew(member, _yachtConfig!.id));
+    }
+    notifyListeners();
+  }
+
+  Future<void> updateAccountExpiry(String userId, DateTime? expiry) async {
+    final idx = _users.indexWhere((u) => u.id == userId);
+    if (idx == -1) return;
+    final u = _users[idx];
+    _users[idx] = AppUser(
+      id: u.id,
+      name: u.name,
+      role: u.role,
+      pin: u.pin,
+      isAdmin: u.isAdmin,
+      yachtId: u.yachtId,
+      yachtName: u.yachtName,
+      accountExpiresAt: expiry,
+      accountStatus: u.accountStatus,
+      mustChangePIN: u.mustChangePIN,
+      email: u.email,
+    );
+    await _storage.saveUsers(_users);
+    notifyListeners();
+  }
+
+  Future<void> blockAccount(String userId) async {
+    final idx = _users.indexWhere((u) => u.id == userId);
+    if (idx == -1) return;
+    final u = _users[idx];
+    _users[idx] = AppUser(
+      id: u.id,
+      name: u.name,
+      role: u.role,
+      pin: u.pin,
+      isAdmin: u.isAdmin,
+      yachtId: u.yachtId,
+      yachtName: u.yachtName,
+      accountExpiresAt: u.accountExpiresAt,
+      accountStatus: AccountStatus.blocked,
+      mustChangePIN: u.mustChangePIN,
+      email: u.email,
+    );
+    await _storage.saveUsers(_users);
+    notifyListeners();
+  }
+
+  Future<void> unblockAccount(String userId) async {
+    final idx = _users.indexWhere((u) => u.id == userId);
+    if (idx == -1) return;
+    final u = _users[idx];
+    _users[idx] = AppUser(
+      id: u.id,
+      name: u.name,
+      role: u.role,
+      pin: u.pin,
+      isAdmin: u.isAdmin,
+      yachtId: u.yachtId,
+      yachtName: u.yachtName,
+      accountExpiresAt: u.accountExpiresAt,
+      accountStatus: AccountStatus.active,
+      mustChangePIN: u.mustChangePIN,
+      email: u.email,
+    );
+    await _storage.saveUsers(_users);
+    notifyListeners();
+  }
+
+  Future<void> resetCrewPin(String userId, String newPin) async {
+    final idx = _users.indexWhere((u) => u.id == userId);
+    if (idx == -1) return;
+    final u = _users[idx];
+    _users[idx] = AppUser(
+      id: u.id,
+      name: u.name,
+      role: u.role,
+      pin: AuthService.hashPin(newPin),
+      isAdmin: u.isAdmin,
+      yachtId: u.yachtId,
+      yachtName: u.yachtName,
+      accountExpiresAt: u.accountExpiresAt,
+      accountStatus: u.accountStatus,
+      mustChangePIN: false,
+      email: u.email,
+    );
+    await _storage.saveUsers(_users);
+    notifyListeners();
+  }
+
   // ==================== TASKS ====================
 
   Future<void> addTask(Task task) async {
     _tasks.insert(0, task);
     await _storage.saveTasks(_tasks);
+    if (_yachtConfig != null) {
+      unawaited(_cloud.upsertTask(task, _yachtConfig!.id));
+    }
     notifyListeners();
   }
 
@@ -332,6 +629,9 @@ class AppProvider extends ChangeNotifier {
     if (idx != -1) {
       _tasks[idx] = task;
       await _storage.saveTasks(_tasks);
+      if (_yachtConfig != null) {
+        unawaited(_cloud.upsertTask(task, _yachtConfig!.id));
+      }
       notifyListeners();
     }
   }
@@ -339,6 +639,38 @@ class AppProvider extends ChangeNotifier {
   Future<void> deleteTask(String id) async {
     _tasks.removeWhere((t) => t.id == id);
     await _storage.saveTasks(_tasks);
+    unawaited(_cloud.deleteTask(id));
+    notifyListeners();
+  }
+
+  Future<void> completeTask(String id, String comment) async {
+    final idx = _tasks.indexWhere((t) => t.id == id);
+    if (idx == -1) return;
+    final t = _tasks[idx];
+    t.status = TaskStatus.completada;
+    t.completedAt = DateTime.now();
+    t.completionComment = comment;
+    t.actionBy = _currentUser?.name;
+    t.actionAt = DateTime.now();
+    await _storage.saveTasks(_tasks);
+    if (_yachtConfig != null) {
+      unawaited(_cloud.upsertTask(t, _yachtConfig!.id));
+    }
+    notifyListeners();
+  }
+
+  Future<void> rejectTask(String id, String reason) async {
+    final idx = _tasks.indexWhere((t) => t.id == id);
+    if (idx == -1) return;
+    final t = _tasks[idx];
+    t.status = TaskStatus.rechazada;
+    t.rejectionReason = reason;
+    t.actionBy = _currentUser?.name;
+    t.actionAt = DateTime.now();
+    await _storage.saveTasks(_tasks);
+    if (_yachtConfig != null) {
+      unawaited(_cloud.upsertTask(t, _yachtConfig!.id));
+    }
     notifyListeners();
   }
 
@@ -354,12 +686,16 @@ class AppProvider extends ChangeNotifier {
   Future<void> addCrewMember(CrewMember member) async {
     _crew.add(member);
     await _storage.saveCrew(_crew);
+    if (_yachtConfig != null) {
+      unawaited(_cloud.upsertCrew(member, _yachtConfig!.id));
+    }
     notifyListeners();
   }
 
   Future<void> deleteCrewMember(String id) async {
     _crew.removeWhere((c) => c.id == id);
     await _storage.saveCrew(_crew);
+    unawaited(_cloud.deleteCrew(id));
     notifyListeners();
   }
 
@@ -368,6 +704,9 @@ class AppProvider extends ChangeNotifier {
   Future<void> addCertificate(Certificate cert) async {
     _certificates.add(cert);
     await _storage.saveCertificates(_certificates);
+    if (_yachtConfig != null) {
+      unawaited(_cloud.upsertCertificate(cert, _yachtConfig!.id));
+    }
     notifyListeners();
   }
 
@@ -376,6 +715,9 @@ class AppProvider extends ChangeNotifier {
     if (idx != -1) {
       _certificates[idx] = cert;
       await _storage.saveCertificates(_certificates);
+      if (_yachtConfig != null) {
+        unawaited(_cloud.upsertCertificate(cert, _yachtConfig!.id));
+      }
       notifyListeners();
     }
   }
@@ -383,6 +725,7 @@ class AppProvider extends ChangeNotifier {
   Future<void> deleteCertificate(String id) async {
     _certificates.removeWhere((c) => c.id == id);
     await _storage.saveCertificates(_certificates);
+    unawaited(_cloud.deleteCertificate(id));
     notifyListeners();
   }
 
@@ -391,6 +734,9 @@ class AppProvider extends ChangeNotifier {
   Future<void> addInventoryItem(InventoryItem item) async {
     _inventory.add(item);
     await _storage.saveInventory(_inventory);
+    if (_yachtConfig != null) {
+      unawaited(_cloud.upsertInventoryItem(item, _yachtConfig!.id));
+    }
     notifyListeners();
   }
 
@@ -399,6 +745,9 @@ class AppProvider extends ChangeNotifier {
     if (idx != -1) {
       _inventory[idx] = item;
       await _storage.saveInventory(_inventory);
+      if (_yachtConfig != null) {
+        unawaited(_cloud.upsertInventoryItem(item, _yachtConfig!.id));
+      }
       notifyListeners();
     }
   }
@@ -406,6 +755,7 @@ class AppProvider extends ChangeNotifier {
   Future<void> deleteInventoryItem(String id) async {
     _inventory.removeWhere((i) => i.id == id);
     await _storage.saveInventory(_inventory);
+    unawaited(_cloud.deleteInventoryItem(id));
     notifyListeners();
   }
 
@@ -414,12 +764,16 @@ class AppProvider extends ChangeNotifier {
   Future<void> addOwnerPreference(OwnerPreference pref) async {
     _ownerPreferences.insert(0, pref);
     await _storage.saveOwnerPreferences(_ownerPreferences);
+    if (_yachtConfig != null) {
+      unawaited(_cloud.upsertOwnerPreference(pref, _yachtConfig!.id));
+    }
     notifyListeners();
   }
 
   Future<void> deleteOwnerPreference(String id) async {
     _ownerPreferences.removeWhere((p) => p.id == id);
     await _storage.saveOwnerPreferences(_ownerPreferences);
+    unawaited(_cloud.deleteOwnerPreference(id));
     notifyListeners();
   }
 
@@ -428,6 +782,9 @@ class AppProvider extends ChangeNotifier {
   Future<void> addIncident(Incident incident) async {
     _incidents.insert(0, incident);
     await _storage.saveIncidents(_incidents);
+    if (_yachtConfig != null) {
+      unawaited(_cloud.upsertIncident(incident, _yachtConfig!.id));
+    }
     notifyListeners();
   }
 
@@ -436,6 +793,9 @@ class AppProvider extends ChangeNotifier {
     if (idx != -1) {
       _incidents[idx] = incident;
       await _storage.saveIncidents(_incidents);
+      if (_yachtConfig != null) {
+        unawaited(_cloud.upsertIncident(incident, _yachtConfig!.id));
+      }
       notifyListeners();
     }
   }
@@ -448,6 +808,10 @@ class AppProvider extends ChangeNotifier {
       _voiceCommands = _voiceCommands.take(50).toList();
     }
     await _storage.saveVoiceCommands(_voiceCommands);
+    if (_yachtConfig != null) {
+      unawaited(_cloud.upsertVoiceCommand(
+          cmd, _yachtConfig!.id, _currentUser?.id));
+    }
     notifyListeners();
   }
 
@@ -494,6 +858,7 @@ class AppProvider extends ChangeNotifier {
           detail: _str(result.datosExtraidos['detalle']) ?? cmd.transcript,
           isPositive: positivo is bool ? positivo : true,
           createdAt: now,
+          viaHeyYat: true,
         ));
         break;
       case 'EVENTO':
@@ -515,6 +880,79 @@ class AppProvider extends ChangeNotifier {
         ));
         break;
     }
+  }
+
+  // ==================== PENDING VOICE MESSAGES ====================
+
+  Future<void> addPendingVoiceMessage(PendingVoiceMessage msg) async {
+    _pendingVoiceMessages.insert(0, msg);
+    await _storage.savePendingVoiceMessages(_pendingVoiceMessages);
+    if (_yachtConfig != null) {
+      unawaited(_cloud.upsertPendingVoiceMessage(
+          msg, _yachtConfig!.id, _currentUser?.id));
+    }
+    notifyListeners();
+  }
+
+  Future<void> processPendingMessages(
+      Future<AiClassificationResult> Function(String) classify) async {
+    final unprocessed = _pendingVoiceMessages.where((m) => !m.processed).toList();
+    for (final msg in unprocessed) {
+      try {
+        final result = await classify(msg.transcript);
+        final cmd = VoiceCommand(
+          id: msg.id,
+          transcript: msg.transcript,
+          category: result.categoria,
+          priority: result.prioridad,
+          extractedData: result.datosExtraidos,
+          userResponse: result.respuestaUsuario,
+          timestamp: msg.recordedAt,
+        );
+        await processVoiceCommand(cmd, result);
+        msg.processed = true;
+      } catch (e) {
+        msg.processingError = e.toString();
+      }
+    }
+    await _storage.savePendingVoiceMessages(_pendingVoiceMessages);
+    notifyListeners();
+  }
+
+  // ==================== SCANNED DOCUMENTS ====================
+
+  Future<void> addScannedDocument(ScannedDocument doc) async {
+    _scannedDocuments.insert(0, doc);
+    await _storage.saveScannedDocuments(_scannedDocuments);
+    if (_yachtConfig != null) {
+      unawaited(_cloud.upsertScannedDocument(doc, _yachtConfig!.id));
+    }
+    notifyListeners();
+  }
+
+  Future<void> updateScannedDocument(ScannedDocument doc) async {
+    final idx = _scannedDocuments.indexWhere((d) => d.id == doc.id);
+    if (idx != -1) {
+      _scannedDocuments[idx] = doc;
+      await _storage.saveScannedDocuments(_scannedDocuments);
+      if (_yachtConfig != null) {
+        unawaited(_cloud.upsertScannedDocument(doc, _yachtConfig!.id));
+      }
+      notifyListeners();
+    }
+  }
+
+  Future<void> deleteScannedDocument(String id) async {
+    _scannedDocuments.removeWhere((d) => d.id == id);
+    await _storage.saveScannedDocuments(_scannedDocuments);
+    unawaited(_cloud.deleteScannedDocument(id));
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _connectivityService?.removeListener(_onConnectivityChanged);
+    super.dispose();
   }
 
   String? _str(dynamic v) => v?.toString();
