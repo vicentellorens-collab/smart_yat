@@ -181,12 +181,16 @@ class CrewMember {
   String name;
   String role;
   String? notes;
+  String? department;
+  String? photoPath;
 
   CrewMember({
     required this.id,
     required this.name,
     required this.role,
     this.notes,
+    this.department,
+    this.photoPath,
   });
 
   Map<String, dynamic> toJson() => {
@@ -194,6 +198,8 @@ class CrewMember {
         'name': name,
         'role': role,
         'notes': notes,
+        'department': department,
+        'photoPath': photoPath,
       };
 
   factory CrewMember.fromJson(Map<String, dynamic> json) => CrewMember(
@@ -201,6 +207,8 @@ class CrewMember {
         name: json['name'],
         role: json['role'],
         notes: json['notes'],
+        department: json['department'],
+        photoPath: json['photoPath'],
       );
 }
 
@@ -213,6 +221,9 @@ class Certificate {
   String type;
   DateTime expiryDate;
   String? notes;
+  String certCategory; // 'barco' or 'tripulante'
+  String? crewMemberId;
+  String? crewMemberName;
 
   Certificate({
     required this.id,
@@ -221,6 +232,9 @@ class Certificate {
     required this.type,
     required this.expiryDate,
     this.notes,
+    this.certCategory = 'barco',
+    this.crewMemberId,
+    this.crewMemberName,
   });
 
   int get daysUntilExpiry =>
@@ -243,6 +257,9 @@ class Certificate {
         'type': type,
         'expiryDate': expiryDate.toIso8601String(),
         'notes': notes,
+        'certCategory': certCategory,
+        'crewMemberId': crewMemberId,
+        'crewMemberName': crewMemberName,
       };
 
   factory Certificate.fromJson(Map<String, dynamic> json) => Certificate(
@@ -252,6 +269,9 @@ class Certificate {
         type: json['type'],
         expiryDate: DateTime.parse(json['expiryDate']),
         notes: json['notes'],
+        certCategory: json['certCategory'] ?? 'barco',
+        crewMemberId: json['crewMemberId'],
+        crewMemberName: json['crewMemberName'],
       );
 }
 

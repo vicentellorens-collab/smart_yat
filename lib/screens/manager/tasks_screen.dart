@@ -6,7 +6,14 @@ import '../../providers/app_provider.dart';
 import '../../widgets/common_widgets.dart';
 
 class TasksScreen extends StatefulWidget {
-  const TasksScreen({super.key});
+  final TaskStatus? initialFilter;
+  final int initialTab;
+
+  const TasksScreen({
+    super.key,
+    this.initialFilter,
+    this.initialTab = 0,
+  });
 
   @override
   State<TasksScreen> createState() => _TasksScreenState();
@@ -16,11 +23,18 @@ class _TasksScreenState extends State<TasksScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabCtrl;
   TaskStatus? _filter;
+  String _historySearch = '';
+  String _historyDateFilter = 'all';
 
   @override
   void initState() {
     super.initState();
-    _tabCtrl = TabController(length: 2, vsync: this);
+    _filter = widget.initialFilter;
+    _tabCtrl = TabController(
+      length: 3,
+      vsync: this,
+      initialIndex: widget.initialTab.clamp(0, 2),
+    );
   }
 
   @override
@@ -32,12 +46,60 @@ class _TasksScreenState extends State<TasksScreen>
   @override
   Widget build(BuildContext context) {
     final p = context.watch<AppProvider>();
-    final rejectedTasks = p.tasks
-        .where((t) => t.status == TaskStatus.rechazada)
-        .toList();
-    final tasks = _filter == null
-        ? p.tasks.where((t) => t.status != TaskStatus.rechazada).toList()
-        : p.tasks.where((t) => t.status == _filter).toList();
+    final rejectedTasks =
+        p.tasks.where((t) => t.status == TaskStatus.rechazada).toList();
+
+    // Active tasks: exclude rejected, hide completed > 48h
+    List<Task> activeTasks;
+    if (_filter == null) {
+      activeTasks = p.tasks.where((t) {
+        if (t.status == TaskStatus.rechazada) return false;
+        if (t.status == TaskStatus.completada) {
+          if (t.completedAt == null) return false;
+          return DateTime.now().difference(t.completedAt!).inHours < 48;
+        }
+        return true;
+      }).toList();
+    } else if (_filter == TaskStatus.completada) {
+      activeTasks = p.tasks.where((t) {
+        if (t.status != TaskStatus.completada) return false;
+        if (t.completedAt == null) return false;
+        return DateTime.now().difference(t.completedAt!).inHours < 48;
+      }).toList();
+    } else {
+      activeTasks = p.tasks.where((t) => t.status == _filter).toList();
+    }
+
+    // History: all completed tasks
+    var historyTasks = p.tasks
+        .where((t) => t.status == TaskStatus.completada)
+        .toList()
+      ..sort((a, b) {
+        final at = a.completedAt ?? a.createdAt;
+        final bt = b.completedAt ?? b.createdAt;
+        return bt.compareTo(at);
+      });
+
+    if (_historySearch.isNotEmpty) {
+      final q = _historySearch.toLowerCase();
+      historyTasks = historyTasks
+          .where((t) =>
+              t.title.toLowerCase().contains(q) ||
+              (t.assignedToName?.toLowerCase().contains(q) ?? false) ||
+              t.description.toLowerCase().contains(q))
+          .toList();
+    }
+    if (_historyDateFilter == 'week') {
+      final cutoff = DateTime.now().subtract(const Duration(days: 7));
+      historyTasks = historyTasks
+          .where((t) => (t.completedAt ?? t.createdAt).isAfter(cutoff))
+          .toList();
+    } else if (_historyDateFilter == 'month') {
+      final cutoff = DateTime.now().subtract(const Duration(days: 30));
+      historyTasks = historyTasks
+          .where((t) => (t.completedAt ?? t.createdAt).isAfter(cutoff))
+          .toList();
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -48,7 +110,7 @@ class _TasksScreenState extends State<TasksScreen>
           unselectedLabelColor: AppTheme.textSecondary,
           indicatorColor: AppTheme.accent,
           tabs: [
-            const Tab(text: 'TODAS'),
+            const Tab(text: 'ACTIVAS'),
             Tab(
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -75,6 +137,7 @@ class _TasksScreenState extends State<TasksScreen>
                 ],
               ),
             ),
+            const Tab(text: 'HISTORIAL'),
           ],
         ),
       ),
@@ -86,16 +149,15 @@ class _TasksScreenState extends State<TasksScreen>
       body: TabBarView(
         controller: _tabCtrl,
         children: [
-          // All tasks tab
+          // ── ACTIVAS tab ──
           Column(
             children: [
-              // Filter chips
               SizedBox(
                 height: 52,
                 child: ListView(
                   scrollDirection: Axis.horizontal,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 8),
                   children: [
                     _FilterChip(
                         label: 'Todas',
@@ -105,58 +167,143 @@ class _TasksScreenState extends State<TasksScreen>
                     _FilterChip(
                         label: 'Pendientes',
                         selected: _filter == TaskStatus.pendiente,
-                        onTap: () =>
-                            setState(() => _filter = TaskStatus.pendiente)),
+                        onTap: () => setState(
+                            () => _filter = TaskStatus.pendiente)),
                     const SizedBox(width: 8),
                     _FilterChip(
                         label: 'En Progreso',
                         selected: _filter == TaskStatus.enProgreso,
-                        onTap: () =>
-                            setState(() => _filter = TaskStatus.enProgreso)),
+                        onTap: () => setState(
+                            () => _filter = TaskStatus.enProgreso)),
                     const SizedBox(width: 8),
                     _FilterChip(
-                        label: 'Completadas',
+                        label: 'Completadas (48h)',
                         selected: _filter == TaskStatus.completada,
-                        onTap: () =>
-                            setState(() => _filter = TaskStatus.completada)),
+                        onTap: () => setState(
+                            () => _filter = TaskStatus.completada)),
                   ],
                 ),
               ),
               Expanded(
-                child: tasks.isEmpty
+                child: activeTasks.isEmpty
                     ? const EmptyState(
                         icon: Icons.task_alt_outlined,
                         message: 'No hay tareas en esta categoría')
                     : ListView.separated(
-                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
-                        itemCount: tasks.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 8),
-                        itemBuilder: (_, i) => _TaskCard(tasks[i]),
+                        padding:
+                            const EdgeInsets.fromLTRB(16, 8, 16, 80),
+                        itemCount: activeTasks.length,
+                        separatorBuilder: (_, __) =>
+                            const SizedBox(height: 8),
+                        itemBuilder: (_, i) =>
+                            _TaskCard(activeTasks[i]),
                       ),
               ),
             ],
           ),
 
-          // Rejected tasks tab
+          // ── RECHAZADAS tab ──
           rejectedTasks.isEmpty
               ? const EmptyState(
                   icon: Icons.check_circle_outline,
                   message: 'Sin tareas rechazadas')
               : ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
+                  padding:
+                      const EdgeInsets.fromLTRB(16, 16, 16, 80),
                   itemCount: rejectedTasks.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 8),
-                  itemBuilder: (_, i) => _RejectedTaskCard(rejectedTasks[i]),
+                  separatorBuilder: (_, __) =>
+                      const SizedBox(height: 8),
+                  itemBuilder: (_, i) =>
+                      _RejectedTaskCard(rejectedTasks[i]),
                 ),
+
+          // ── HISTORIAL tab ──
+          Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                child: TextField(
+                  style: const TextStyle(color: AppTheme.textPrimary),
+                  decoration: InputDecoration(
+                    hintText: 'Buscar en historial...',
+                    hintStyle:
+                        const TextStyle(color: AppTheme.textSecondary),
+                    prefixIcon: const Icon(Icons.search,
+                        color: AppTheme.textSecondary),
+                    suffixIcon: _historySearch.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear,
+                                color: AppTheme.textSecondary),
+                            onPressed: () =>
+                                setState(() => _historySearch = ''),
+                          )
+                        : null,
+                    contentPadding:
+                        const EdgeInsets.symmetric(vertical: 10),
+                    isDense: true,
+                  ),
+                  onChanged: (v) =>
+                      setState(() => _historySearch = v),
+                ),
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                height: 44,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16),
+                  children: [
+                    _FilterChip(
+                        label: 'Todo',
+                        selected: _historyDateFilter == 'all',
+                        onTap: () => setState(
+                            () => _historyDateFilter = 'all')),
+                    const SizedBox(width: 8),
+                    _FilterChip(
+                        label: 'Esta semana',
+                        selected: _historyDateFilter == 'week',
+                        onTap: () => setState(
+                            () => _historyDateFilter = 'week')),
+                    const SizedBox(width: 8),
+                    _FilterChip(
+                        label: 'Este mes',
+                        selected: _historyDateFilter == 'month',
+                        onTap: () => setState(
+                            () => _historyDateFilter = 'month')),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 4),
+              Expanded(
+                child: historyTasks.isEmpty
+                    ? const EmptyState(
+                        icon: Icons.history,
+                        message: 'No hay tareas completadas')
+                    : ListView.separated(
+                        padding:
+                            const EdgeInsets.fromLTRB(16, 8, 16, 80),
+                        itemCount: historyTasks.length,
+                        separatorBuilder: (_, __) =>
+                            const SizedBox(height: 8),
+                        itemBuilder: (_, i) =>
+                            _HistoryTaskCard(historyTasks[i]),
+                      ),
+              ),
+            ],
+          ),
         ],
       ),
     );
   }
 
   void _showTaskDialog(BuildContext context, [Task? existing]) {
-    final titleCtrl = TextEditingController(text: existing?.title);
-    final descCtrl = TextEditingController(text: existing?.description);
-    TaskPriority priority = existing?.priority ?? TaskPriority.media;
+    final titleCtrl =
+        TextEditingController(text: existing?.title);
+    final descCtrl =
+        TextEditingController(text: existing?.description);
+    TaskPriority priority =
+        existing?.priority ?? TaskPriority.media;
     String? assignedId = existing?.assignedToId;
     String? assignedName = existing?.assignedToName;
     final crew = context.read<AppProvider>().crew;
@@ -167,45 +314,57 @@ class _TasksScreenState extends State<TasksScreen>
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setModalState) => Padding(
           padding: EdgeInsets.fromLTRB(
-              20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
+              20,
+              20,
+              20,
+              MediaQuery.of(ctx).viewInsets.bottom + 20),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(existing == null ? 'NUEVA TAREA' : 'EDITAR TAREA',
+              Text(
+                  existing == null ? 'NUEVA TAREA' : 'EDITAR TAREA',
                   style: AppTheme.orbitron(size: 14)),
               const SizedBox(height: 16),
               TextField(
                 controller: titleCtrl,
-                style: const TextStyle(color: AppTheme.textPrimary),
-                decoration: const InputDecoration(labelText: 'Título'),
+                style: const TextStyle(
+                    color: AppTheme.textPrimary),
+                decoration:
+                    const InputDecoration(labelText: 'Título'),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: descCtrl,
-                style: const TextStyle(color: AppTheme.textPrimary),
+                style: const TextStyle(
+                    color: AppTheme.textPrimary),
                 maxLines: 2,
-                decoration: const InputDecoration(labelText: 'Descripción'),
+                decoration:
+                    const InputDecoration(labelText: 'Descripción'),
               ),
               const SizedBox(height: 12),
-              // Priority
               Row(
                 children: [
                   const Text('Prioridad:',
                       style: TextStyle(
-                          color: AppTheme.textSecondary, fontSize: 13)),
+                          color: AppTheme.textSecondary,
+                          fontSize: 13)),
                   const SizedBox(width: 10),
                   ...TaskPriority.values.map((p) => GestureDetector(
-                        onTap: () => setModalState(() => priority = p),
+                        onTap: () =>
+                            setModalState(() => priority = p),
                         child: Container(
-                          margin: const EdgeInsets.only(right: 8),
+                          margin:
+                              const EdgeInsets.only(right: 8),
                           padding: const EdgeInsets.symmetric(
                               horizontal: 10, vertical: 6),
                           decoration: BoxDecoration(
                             color: priority == p
-                                ? AppTheme.accent.withValues(alpha: 0.2)
+                                ? AppTheme.accent
+                                    .withValues(alpha: 0.2)
                                 : AppTheme.background,
-                            borderRadius: BorderRadius.circular(6),
+                            borderRadius:
+                                BorderRadius.circular(6),
                             border: Border.all(
                               color: priority == p
                                   ? AppTheme.accent
@@ -225,16 +384,18 @@ class _TasksScreenState extends State<TasksScreen>
                 ],
               ),
               const SizedBox(height: 12),
-              // Assign to crew
               DropdownButtonFormField<String>(
                 initialValue: assignedId,
                 dropdownColor: AppTheme.panel,
-                style: const TextStyle(color: AppTheme.textPrimary),
+                style: const TextStyle(
+                    color: AppTheme.textPrimary),
                 decoration: const InputDecoration(
-                    labelText: 'Asignar a tripulante (opcional)'),
+                    labelText:
+                        'Asignar a tripulante (opcional)'),
                 items: [
                   const DropdownMenuItem(
-                      value: null, child: Text('Sin asignar')),
+                      value: null,
+                      child: Text('Sin asignar')),
                   ...crew.map((c) => DropdownMenuItem(
                         value: c.id,
                         child: Text(c.name),
@@ -256,10 +417,13 @@ class _TasksScreenState extends State<TasksScreen>
                 child: ElevatedButton(
                   onPressed: () {
                     if (titleCtrl.text.trim().isEmpty) return;
-                    final provider = context.read<AppProvider>();
+                    final provider =
+                        context.read<AppProvider>();
                     if (existing == null) {
                       provider.addTask(Task(
-                        id: DateTime.now().millisecondsSinceEpoch.toString(),
+                        id: DateTime.now()
+                            .millisecondsSinceEpoch
+                            .toString(),
                         title: titleCtrl.text.trim(),
                         description: descCtrl.text.trim(),
                         priority: priority,
@@ -269,7 +433,8 @@ class _TasksScreenState extends State<TasksScreen>
                       ));
                     } else {
                       existing.title = titleCtrl.text.trim();
-                      existing.description = descCtrl.text.trim();
+                      existing.description =
+                          descCtrl.text.trim();
                       existing.priority = priority;
                       existing.assignedToId = assignedId;
                       existing.assignedToName = assignedName;
@@ -277,7 +442,9 @@ class _TasksScreenState extends State<TasksScreen>
                     }
                     Navigator.pop(ctx);
                   },
-                  child: Text(existing == null ? 'CREAR TAREA' : 'GUARDAR'),
+                  child: Text(existing == null
+                      ? 'CREAR TAREA'
+                      : 'GUARDAR'),
                 ),
               ),
             ],
@@ -293,27 +460,36 @@ class _FilterChip extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
   const _FilterChip(
-      {required this.label, required this.selected, required this.onTap});
+      {required this.label,
+      required this.selected,
+      required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        padding:
+            const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         decoration: BoxDecoration(
-          color: selected ? AppTheme.accent.withValues(alpha: 0.2) : AppTheme.panel,
+          color: selected
+              ? AppTheme.accent.withValues(alpha: 0.2)
+              : AppTheme.panel,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: selected ? AppTheme.accent : AppTheme.dividerColor,
+            color:
+                selected ? AppTheme.accent : AppTheme.dividerColor,
           ),
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: selected ? AppTheme.accent : AppTheme.textSecondary,
+            color: selected
+                ? AppTheme.accent
+                : AppTheme.textSecondary,
             fontSize: 12,
-            fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+            fontWeight:
+                selected ? FontWeight.bold : FontWeight.normal,
           ),
         ),
       ),
@@ -337,9 +513,11 @@ class _TaskCard extends StatelessWidget {
           color: AppTheme.errorColor.withValues(alpha: 0.2),
           borderRadius: BorderRadius.circular(12),
         ),
-        child: const Icon(Icons.delete_outline, color: AppTheme.errorColor),
+        child:
+            const Icon(Icons.delete_outline, color: AppTheme.errorColor),
       ),
-      onDismissed: (_) => context.read<AppProvider>().deleteTask(task.id),
+      onDismissed: (_) =>
+          context.read<AppProvider>().deleteTask(task.id),
       child: GestureDetector(
         onTap: () => _showTaskDetails(context, task),
         child: Container(
@@ -357,14 +535,16 @@ class _TaskCard extends StatelessWidget {
                   Expanded(
                     child: Text(task.title,
                         style: TextStyle(
-                            color: task.status == TaskStatus.completada
+                            color: task.status ==
+                                    TaskStatus.completada
                                 ? AppTheme.textSecondary
                                 : AppTheme.textPrimary,
                             fontWeight: FontWeight.w600,
                             fontSize: 14,
-                            decoration: task.status == TaskStatus.completada
-                                ? TextDecoration.lineThrough
-                                : null)),
+                            decoration:
+                                task.status == TaskStatus.completada
+                                    ? TextDecoration.lineThrough
+                                    : null)),
                   ),
                   const SizedBox(width: 8),
                   PriorityBadge(task.priority),
@@ -387,12 +567,14 @@ class _TaskCard extends StatelessWidget {
                     const SizedBox(width: 4),
                     Text(task.assignedToName!,
                         style: const TextStyle(
-                            color: AppTheme.textSecondary, fontSize: 11)),
+                            color: AppTheme.textSecondary,
+                            fontSize: 11)),
                     const SizedBox(width: 12),
                   ],
                   Text(timeAgo(task.createdAt),
                       style: const TextStyle(
-                          color: AppTheme.textSecondary, fontSize: 11)),
+                          color: AppTheme.textSecondary,
+                          fontSize: 11)),
                   const Spacer(),
                   TaskStatusChip(task.status),
                 ],
@@ -434,7 +616,8 @@ class _TaskCard extends StatelessWidget {
                       color: AppTheme.textSecondary, size: 16),
                   const SizedBox(width: 6),
                   Text(task.assignedToName!,
-                      style: const TextStyle(color: AppTheme.textPrimary)),
+                      style: const TextStyle(
+                          color: AppTheme.textPrimary)),
                 ],
               ),
             ],
@@ -461,7 +644,117 @@ class _TaskCard extends StatelessWidget {
   }
 }
 
-// ==================== REJECTED TASK CARD ====================
+// ── HISTORY TASK CARD (read-only) ──
+
+class _HistoryTaskCard extends StatelessWidget {
+  final Task task;
+  const _HistoryTaskCard(this.task);
+
+  @override
+  Widget build(BuildContext context) {
+    final completedTime =
+        task.completedAt != null ? timeAgo(task.completedAt!) : null;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppTheme.panel,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+            color: AppTheme.successColor.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.check_circle_outline,
+                  color: AppTheme.successColor, size: 16),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(task.title,
+                    style: const TextStyle(
+                        color: AppTheme.textPrimary,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                        decoration: TextDecoration.lineThrough)),
+              ),
+              PriorityBadge(task.priority),
+            ],
+          ),
+          if (task.description.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(task.description,
+                style: const TextStyle(
+                    color: AppTheme.textSecondary, fontSize: 12),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis),
+          ],
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              if (task.assignedToName != null) ...[
+                const Icon(Icons.person_outline,
+                    color: AppTheme.textSecondary, size: 13),
+                const SizedBox(width: 4),
+                Text(task.assignedToName!,
+                    style: const TextStyle(
+                        color: AppTheme.textSecondary,
+                        fontSize: 11)),
+                const SizedBox(width: 12),
+              ],
+              if (completedTime != null) ...[
+                const Icon(Icons.check,
+                    color: AppTheme.successColor, size: 13),
+                const SizedBox(width: 4),
+                Text(completedTime,
+                    style: const TextStyle(
+                        color: AppTheme.successColor,
+                        fontSize: 11)),
+              ],
+              const Spacer(),
+              if (task.completionComment != null &&
+                  task.completionComment!.isNotEmpty)
+                GestureDetector(
+                  onTap: () => showDialog(
+                    context: context,
+                    builder: (_) => AlertDialog(
+                      title: const Text('Comentario',
+                          style: TextStyle(
+                              color: AppTheme.textPrimary)),
+                      content: Text(task.completionComment!,
+                          style: const TextStyle(
+                              color: AppTheme.textSecondary)),
+                      actions: [
+                        TextButton(
+                          onPressed: () =>
+                              Navigator.pop(context),
+                          child: const Text('Cerrar'),
+                        )
+                      ],
+                    ),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.comment_outlined,
+                          color: AppTheme.textSecondary,
+                          size: 13),
+                      SizedBox(width: 4),
+                      Text('Comentario',
+                          style: TextStyle(
+                              color: AppTheme.textSecondary,
+                              fontSize: 11)),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── REJECTED TASK CARD ──
 
 class _RejectedTaskCard extends StatelessWidget {
   final Task task;
@@ -474,7 +767,8 @@ class _RejectedTaskCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppTheme.panel,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppTheme.errorColor.withValues(alpha: 0.4)),
+        border: Border.all(
+            color: AppTheme.errorColor.withValues(alpha: 0.4)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -500,7 +794,8 @@ class _RejectedTaskCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: AppTheme.errorColor.withValues(alpha: 0.08),
+                color:
+                    AppTheme.errorColor.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Row(
@@ -512,7 +807,8 @@ class _RejectedTaskCard extends StatelessWidget {
                     child: Text(
                       task.rejectionReason!,
                       style: const TextStyle(
-                          color: AppTheme.errorColor, fontSize: 12),
+                          color: AppTheme.errorColor,
+                          fontSize: 12),
                     ),
                   ),
                 ],
@@ -537,24 +833,32 @@ class _RejectedTaskCard extends StatelessWidget {
                   label: const Text('Reasignar'),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppTheme.accent,
-                    side: const BorderSide(color: AppTheme.accent),
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    textStyle: const TextStyle(fontSize: 12),
+                    side: const BorderSide(
+                        color: AppTheme.accent),
+                    padding:
+                        const EdgeInsets.symmetric(vertical: 8),
+                    textStyle:
+                        const TextStyle(fontSize: 12),
                   ),
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: () =>
-                      context.read<AppProvider>().deleteTask(task.id),
-                  icon: const Icon(Icons.delete_outline, size: 14),
+                  onPressed: () => context
+                      .read<AppProvider>()
+                      .deleteTask(task.id),
+                  icon: const Icon(Icons.delete_outline,
+                      size: 14),
                   label: const Text('Eliminar'),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppTheme.errorColor,
-                    side: const BorderSide(color: AppTheme.errorColor),
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    textStyle: const TextStyle(fontSize: 12),
+                    side: const BorderSide(
+                        color: AppTheme.errorColor),
+                    padding:
+                        const EdgeInsets.symmetric(vertical: 8),
+                    textStyle:
+                        const TextStyle(fontSize: 12),
                   ),
                 ),
               ),
@@ -574,7 +878,8 @@ class _RejectedTaskCard extends StatelessWidget {
       context: context,
       builder: (_) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          title: Text('Reasignar tarea', style: AppTheme.orbitron(size: 14)),
+          title: Text('Reasignar tarea',
+              style: AppTheme.orbitron(size: 14)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -586,13 +891,16 @@ class _RejectedTaskCard extends StatelessWidget {
               DropdownButtonFormField<String>(
                 initialValue: newAssignedId,
                 dropdownColor: AppTheme.panel,
-                style: const TextStyle(color: AppTheme.textPrimary),
-                decoration: const InputDecoration(
-                    labelText: 'Asignar a'),
-                items: crew.map((c) => DropdownMenuItem(
-                      value: c.id,
-                      child: Text(c.name),
-                    )).toList(),
+                style:
+                    const TextStyle(color: AppTheme.textPrimary),
+                decoration:
+                    const InputDecoration(labelText: 'Asignar a'),
+                items: crew
+                    .map((c) => DropdownMenuItem(
+                          value: c.id,
+                          child: Text(c.name),
+                        ))
+                    .toList(),
                 onChanged: (v) {
                   setDialogState(() {
                     newAssignedId = v;
@@ -628,7 +936,8 @@ class _RejectedTaskCard extends StatelessWidget {
                   ),
                 );
               },
-              style: TextButton.styleFrom(foregroundColor: AppTheme.accent),
+              style: TextButton.styleFrom(
+                  foregroundColor: AppTheme.accent),
               child: const Text('Reasignar'),
             ),
           ],

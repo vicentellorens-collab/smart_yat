@@ -5,8 +5,11 @@ import '../../models/models.dart';
 import '../../providers/app_provider.dart';
 import '../../widgets/common_widgets.dart';
 
+const _kUnits = ['L', 'uds', 'kg', 'g', 'm', 'cajas', 'packs', 'botellas', 'Otro'];
+
 class InventoryScreen extends StatefulWidget {
-  const InventoryScreen({super.key});
+  final InventoryStatus? initialFilter;
+  const InventoryScreen({super.key, this.initialFilter});
 
   @override
   State<InventoryScreen> createState() => _InventoryScreenState();
@@ -16,13 +19,18 @@ class _InventoryScreenState extends State<InventoryScreen> {
   InventoryStatus? _filter;
 
   @override
+  void initState() {
+    super.initState();
+    _filter = widget.initialFilter;
+  }
+
+  @override
   Widget build(BuildContext context) {
     final p = context.watch<AppProvider>();
     var items = p.inventory;
     if (_filter != null) {
       items = items.where((i) => i.status == _filter).toList();
     }
-    // Sort: sinStock → bajo → ok
     items = [...items]..sort((a, b) {
         const order = {
           InventoryStatus.sinStock: 0,
@@ -41,12 +49,12 @@ class _InventoryScreenState extends State<InventoryScreen> {
       ),
       body: Column(
         children: [
-          // Filter chips
           SizedBox(
             height: 52,
             child: ListView(
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               children: [
                 _FChip(
                     label: 'Todo',
@@ -71,7 +79,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
                     label: 'OK',
                     color: AppTheme.successColor,
                     selected: _filter == InventoryStatus.ok,
-                    onTap: () => setState(() => _filter = InventoryStatus.ok)),
+                    onTap: () =>
+                        setState(() => _filter = InventoryStatus.ok)),
               ],
             ),
           ),
@@ -83,12 +92,14 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 : ListView.separated(
                     padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
                     itemCount: items.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 8),
+                    separatorBuilder: (_, __) =>
+                        const SizedBox(height: 8),
                     itemBuilder: (_, i) => _ItemCard(
                       item: items[i],
                       onTap: () => _showItemDialog(context, items[i]),
-                      onDelete: () =>
-                          context.read<AppProvider>().deleteInventoryItem(items[i].id),
+                      onDelete: () => context
+                          .read<AppProvider>()
+                          .deleteInventoryItem(items[i].id),
                     ),
                   ),
           ),
@@ -99,131 +110,185 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
   void _showItemDialog(BuildContext context, [InventoryItem? existing]) {
     final nameCtrl = TextEditingController(text: existing?.name);
-    final categoryCtrl = TextEditingController(text: existing?.category);
+    final categoryCtrl =
+        TextEditingController(text: existing?.category);
     final qtyCtrl = TextEditingController(
         text: existing?.quantity.toString() ?? '');
-    final unitCtrl = TextEditingController(text: existing?.unit ?? '');
     final minCtrl =
         TextEditingController(text: existing?.minLevel.toString() ?? '');
     final locCtrl = TextEditingController(text: existing?.location ?? '');
+    final customUnitCtrl = TextEditingController();
+
+    // Determine initial unit selection
+    String? selectedUnit;
+    if (existing?.unit != null) {
+      selectedUnit = _kUnits.contains(existing!.unit) ? existing.unit : 'Otro';
+      if (selectedUnit == 'Otro') {
+        customUnitCtrl.text = existing.unit;
+      }
+    }
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.fromLTRB(
-            20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(existing == null ? 'NUEVO ARTÍCULO' : 'EDITAR ARTÍCULO',
-                  style: AppTheme.orbitron(size: 14)),
-              const SizedBox(height: 16),
-              TextField(
-                controller: nameCtrl,
-                style: const TextStyle(color: AppTheme.textPrimary),
-                decoration: const InputDecoration(labelText: 'Nombre'),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: categoryCtrl,
-                      style: const TextStyle(color: AppTheme.textPrimary),
-                      decoration:
-                          const InputDecoration(labelText: 'Categoría'),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: TextField(
-                      controller: unitCtrl,
-                      style: const TextStyle(color: AppTheme.textPrimary),
-                      decoration: const InputDecoration(labelText: 'Unidad'),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: qtyCtrl,
-                      style: const TextStyle(color: AppTheme.textPrimary),
-                      keyboardType: TextInputType.number,
-                      decoration:
-                          const InputDecoration(labelText: 'Cantidad actual'),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: TextField(
-                      controller: minCtrl,
-                      style: const TextStyle(color: AppTheme.textPrimary),
-                      keyboardType: TextInputType.number,
-                      decoration:
-                          const InputDecoration(labelText: 'Mínimo'),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: locCtrl,
-                style: const TextStyle(color: AppTheme.textPrimary),
-                decoration:
-                    const InputDecoration(labelText: 'Ubicación (opcional)'),
-              ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    if (nameCtrl.text.trim().isEmpty) return;
-                    final prov = context.read<AppProvider>();
-                    final qty = double.tryParse(qtyCtrl.text) ?? 0;
-                    final min = double.tryParse(minCtrl.text) ?? 0;
-                    if (existing == null) {
-                      prov.addInventoryItem(InventoryItem(
-                        id: DateTime.now().millisecondsSinceEpoch.toString(),
-                        name: nameCtrl.text.trim(),
-                        category: categoryCtrl.text.trim().isEmpty
-                            ? 'General'
-                            : categoryCtrl.text.trim(),
-                        quantity: qty,
-                        unit: unitCtrl.text.trim().isEmpty
-                            ? 'unid'
-                            : unitCtrl.text.trim(),
-                        minLevel: min,
-                        location: locCtrl.text.trim().isEmpty
-                            ? null
-                            : locCtrl.text.trim(),
-                      ));
-                    } else {
-                      existing.name = nameCtrl.text.trim();
-                      existing.category = categoryCtrl.text.trim().isEmpty
-                          ? 'General'
-                          : categoryCtrl.text.trim();
-                      existing.quantity = qty;
-                      existing.unit = unitCtrl.text.trim().isEmpty
-                          ? 'unid'
-                          : unitCtrl.text.trim();
-                      existing.minLevel = min;
-                      existing.location = locCtrl.text.trim().isEmpty
-                          ? null
-                          : locCtrl.text.trim();
-                      prov.updateInventoryItem(existing);
-                    }
-                    Navigator.pop(ctx);
-                  },
-                  child: Text(existing == null ? 'AÑADIR' : 'GUARDAR'),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) => Padding(
+          padding: EdgeInsets.fromLTRB(
+              20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                    existing == null
+                        ? 'NUEVO ARTÍCULO'
+                        : 'EDITAR ARTÍCULO',
+                    style: AppTheme.orbitron(size: 14)),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: nameCtrl,
+                  style: const TextStyle(color: AppTheme.textPrimary),
+                  decoration:
+                      const InputDecoration(labelText: 'Nombre'),
                 ),
-              ),
-            ],
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: categoryCtrl,
+                        style: const TextStyle(
+                            color: AppTheme.textPrimary),
+                        decoration:
+                            const InputDecoration(labelText: 'Categoría'),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    // Unit dropdown
+                    Expanded(
+                      child: DropdownButtonFormField<String>(
+                        value: selectedUnit,
+                        dropdownColor: AppTheme.panel,
+                        style: const TextStyle(
+                            color: AppTheme.textPrimary),
+                        decoration:
+                            const InputDecoration(labelText: 'Unidad'),
+                        items: _kUnits
+                            .map((u) => DropdownMenuItem(
+                                  value: u,
+                                  child: Text(u),
+                                ))
+                            .toList(),
+                        onChanged: (v) =>
+                            setModalState(() => selectedUnit = v),
+                      ),
+                    ),
+                  ],
+                ),
+                // Custom unit field when "Otro" is selected
+                if (selectedUnit == 'Otro') ...[
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: customUnitCtrl,
+                    style: const TextStyle(color: AppTheme.textPrimary),
+                    decoration: const InputDecoration(
+                        labelText: 'Unidad personalizada'),
+                  ),
+                ],
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: qtyCtrl,
+                        style: const TextStyle(
+                            color: AppTheme.textPrimary),
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                            labelText: 'Cantidad actual'),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: TextField(
+                        controller: minCtrl,
+                        style: const TextStyle(
+                            color: AppTheme.textPrimary),
+                        keyboardType: TextInputType.number,
+                        decoration:
+                            const InputDecoration(labelText: 'Mínimo'),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: locCtrl,
+                  style: const TextStyle(color: AppTheme.textPrimary),
+                  decoration: const InputDecoration(
+                      labelText: 'Ubicación (opcional)'),
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      if (nameCtrl.text.trim().isEmpty) return;
+                      final prov = context.read<AppProvider>();
+                      final qty =
+                          double.tryParse(qtyCtrl.text) ?? 0;
+                      final min =
+                          double.tryParse(minCtrl.text) ?? 0;
+                      // Resolve unit
+                      String unit;
+                      if (selectedUnit == 'Otro') {
+                        unit = customUnitCtrl.text.trim().isEmpty
+                            ? 'uds'
+                            : customUnitCtrl.text.trim();
+                      } else {
+                        unit = selectedUnit ?? 'uds';
+                      }
+                      if (existing == null) {
+                        prov.addInventoryItem(InventoryItem(
+                          id: DateTime.now()
+                              .millisecondsSinceEpoch
+                              .toString(),
+                          name: nameCtrl.text.trim(),
+                          category:
+                              categoryCtrl.text.trim().isEmpty
+                                  ? 'General'
+                                  : categoryCtrl.text.trim(),
+                          quantity: qty,
+                          unit: unit,
+                          minLevel: min,
+                          location: locCtrl.text.trim().isEmpty
+                              ? null
+                              : locCtrl.text.trim(),
+                        ));
+                      } else {
+                        existing.name = nameCtrl.text.trim();
+                        existing.category =
+                            categoryCtrl.text.trim().isEmpty
+                                ? 'General'
+                                : categoryCtrl.text.trim();
+                        existing.quantity = qty;
+                        existing.unit = unit;
+                        existing.minLevel = min;
+                        existing.location =
+                            locCtrl.text.trim().isEmpty
+                                ? null
+                                : locCtrl.text.trim();
+                        prov.updateInventoryItem(existing);
+                      }
+                      Navigator.pop(ctx);
+                    },
+                    child: Text(
+                        existing == null ? 'AÑADIR' : 'GUARDAR'),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -250,7 +315,8 @@ class _FChip extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        padding:
+            const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         decoration: BoxDecoration(
           color: selected ? c.withOpacity(0.2) : AppTheme.panel,
           borderRadius: BorderRadius.circular(20),
@@ -342,8 +408,8 @@ class _ItemCard extends StatelessWidget {
                                 fontSize: 11)),
                         if (item.location != null) ...[
                           const Text(' · ',
-                              style:
-                                  TextStyle(color: AppTheme.textSecondary)),
+                              style: TextStyle(
+                                  color: AppTheme.textSecondary)),
                           Text(item.location!,
                               style: const TextStyle(
                                   color: AppTheme.textSecondary,
@@ -367,7 +433,8 @@ class _ItemCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text('mín. ${item.minLevel} ${item.unit}',
                       style: const TextStyle(
-                          color: AppTheme.textSecondary, fontSize: 10)),
+                          color: AppTheme.textSecondary,
+                          fontSize: 10)),
                   const SizedBox(height: 4),
                   InventoryBadge(item.status),
                 ],

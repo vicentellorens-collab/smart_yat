@@ -493,6 +493,8 @@ class AppProvider extends ChangeNotifier {
     DateTime? accountExpiresAt,
     String? email,
     String? notes,
+    String? department,
+    String? photoPath,
   }) async {
     final id = DateTime.now().millisecondsSinceEpoch.toString();
     final hashedPin = AuthService.hashPin(pin);
@@ -507,6 +509,7 @@ class AppProvider extends ChangeNotifier {
       yachtName: _yachtConfig?.name,
       accountExpiresAt: accountExpiresAt,
       accountStatus: AccountStatus.active,
+      mustChangePIN: true,
       email: email,
     );
 
@@ -515,6 +518,8 @@ class AppProvider extends ChangeNotifier {
       name: name,
       role: role,
       notes: notes,
+      department: department,
+      photoPath: photoPath,
     );
 
     _users.add(user);
@@ -610,6 +615,7 @@ class AppProvider extends ChangeNotifier {
       email: u.email,
     );
     await _storage.saveUsers(_users);
+    unawaited(_cloud.upsertUser(_users[idx]));
     notifyListeners();
   }
 

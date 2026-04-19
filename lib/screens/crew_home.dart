@@ -44,6 +44,17 @@ class _CrewHomeState extends State<CrewHome> {
         ),
         actions: [
           IconButton(
+            icon: const Icon(Icons.switch_account),
+            tooltip: 'Cambiar de perfil',
+            onPressed: () {
+              context.read<AppProvider>().logout();
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (_) => const LoginScreen()),
+                (_) => false,
+              );
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.logout),
             tooltip: 'Cerrar sesión',
             onPressed: () {

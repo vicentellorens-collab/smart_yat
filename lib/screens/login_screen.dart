@@ -7,6 +7,7 @@ import '../providers/app_provider.dart';
 import '../services/auth_service.dart';
 import 'manager_home.dart';
 import 'crew_home.dart';
+import 'force_pin_change_screen.dart';
 
 enum _LoginMode { welcome, register, login }
 
@@ -361,11 +362,17 @@ class _LoginViewState extends State<_LoginView> {
     }
 
     provider.login(_selectedUser!);
-    Navigator.of(context).pushReplacement(MaterialPageRoute(
-      builder: (_) => _selectedUser!.role == UserRole.gestor
-          ? const ManagerHome()
-          : const CrewHome(),
-    ));
+    if (_selectedUser!.mustChangePIN) {
+      Navigator.of(context).pushReplacement(MaterialPageRoute(
+        builder: (_) => ForcePinChangeScreen(user: _selectedUser!),
+      ));
+    } else {
+      Navigator.of(context).pushReplacement(MaterialPageRoute(
+        builder: (_) => _selectedUser!.role == UserRole.gestor
+            ? const ManagerHome()
+            : const CrewHome(),
+      ));
+    }
   }
 
   @override

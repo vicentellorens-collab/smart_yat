@@ -6,7 +6,22 @@ import '../../providers/app_provider.dart';
 import '../../widgets/common_widgets.dart';
 
 class DashboardScreen extends StatelessWidget {
-  const DashboardScreen({super.key});
+  final VoidCallback onActiveTasks;
+  final VoidCallback onRejectedTasks;
+  final VoidCallback onIncidents;
+  final VoidCallback onCertificates;
+  final VoidCallback onLowStock;
+  final VoidCallback onDocScan;
+
+  DashboardScreen({
+    super.key,
+    required this.onActiveTasks,
+    required this.onRejectedTasks,
+    required this.onIncidents,
+    required this.onCertificates,
+    required this.onLowStock,
+    required this.onDocScan,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -49,12 +64,19 @@ class DashboardScreen extends StatelessWidget {
             Text('Buen día, ${user?.name ?? 'Capitán'}',
                 style: AppTheme.orbitron(size: 14)),
             const SizedBox(height: 4),
-            Text(
+            const Text(
               'Estado del yate en tiempo real',
-              style: const TextStyle(
-                  color: AppTheme.textSecondary, fontSize: 12),
+              style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 8),
+            const Text(
+              'Pulsa un widget para ir al módulo',
+              style: TextStyle(
+                  color: AppTheme.textSecondary,
+                  fontSize: 11,
+                  fontStyle: FontStyle.italic),
+            ),
+            const SizedBox(height: 16),
 
             // Stats grid
             GridView.count(
@@ -70,6 +92,7 @@ class DashboardScreen extends StatelessWidget {
                   value: '${p.activeTasks}',
                   icon: Icons.task_alt_outlined,
                   color: AppTheme.accent,
+                  onTap: onActiveTasks,
                 ),
                 StatCard(
                   label: 'Tareas Rechazadas',
@@ -78,6 +101,7 @@ class DashboardScreen extends StatelessWidget {
                   color: p.rejectedTasks > 0
                       ? AppTheme.errorColor
                       : AppTheme.successColor,
+                  onTap: onRejectedTasks,
                 ),
                 StatCard(
                   label: 'Incidencias Abiertas',
@@ -86,6 +110,7 @@ class DashboardScreen extends StatelessWidget {
                   color: p.openIncidents > 0
                       ? AppTheme.errorColor
                       : AppTheme.successColor,
+                  onTap: onIncidents,
                 ),
                 StatCard(
                   label: 'Certs. con Alerta',
@@ -94,6 +119,7 @@ class DashboardScreen extends StatelessWidget {
                   color: p.alertCertificates > 0
                       ? AppTheme.warningColor
                       : AppTheme.successColor,
+                  onTap: onCertificates,
                 ),
                 StatCard(
                   label: 'Stock Bajo/Agotado',
@@ -102,12 +128,14 @@ class DashboardScreen extends StatelessWidget {
                   color: p.lowStockItems > 0
                       ? AppTheme.warningColor
                       : AppTheme.successColor,
+                  onTap: onLowStock,
                 ),
                 StatCard(
                   label: 'Docs Escaneados',
                   value: '${p.scannedDocuments.length}',
                   icon: Icons.document_scanner_outlined,
                   color: AppTheme.accent,
+                  onTap: onDocScan,
                 ),
               ],
             ),
@@ -117,7 +145,15 @@ class DashboardScreen extends StatelessWidget {
             if (p.incidents
                 .where((i) => i.status == IncidentStatus.abierta)
                 .isNotEmpty) ...[
-              const SectionTitle('INCIDENCIAS ACTIVAS'),
+              SectionTitle(
+                'INCIDENCIAS ACTIVAS',
+                trailing: TextButton(
+                  onPressed: onIncidents,
+                  child: const Text('Ver todas',
+                      style: TextStyle(
+                          color: AppTheme.accent, fontSize: 12)),
+                ),
+              ),
               const SizedBox(height: 10),
               ...p.incidents
                   .where((i) => i.status == IncidentStatus.abierta)
@@ -132,7 +168,15 @@ class DashboardScreen extends StatelessWidget {
                     c.alertLevel == AlertLevel.days15 ||
                     c.alertLevel == AlertLevel.expired)
                 .isNotEmpty) ...[
-              const SectionTitle('CERTIFICADOS URGENTES'),
+              SectionTitle(
+                'CERTIFICADOS URGENTES',
+                trailing: TextButton(
+                  onPressed: onCertificates,
+                  child: const Text('Ver todos',
+                      style: TextStyle(
+                          color: AppTheme.accent, fontSize: 12)),
+                ),
+              ),
               const SizedBox(height: 10),
               ...p.certificates
                   .where((c) =>
@@ -146,7 +190,15 @@ class DashboardScreen extends StatelessWidget {
             if (p.inventory
                 .where((i) => i.status == InventoryStatus.sinStock)
                 .isNotEmpty) ...[
-              const SectionTitle('SIN STOCK'),
+              SectionTitle(
+                'SIN STOCK',
+                trailing: TextButton(
+                  onPressed: onLowStock,
+                  child: const Text('Ver todo',
+                      style: TextStyle(
+                          color: AppTheme.accent, fontSize: 12)),
+                ),
+              ),
               const SizedBox(height: 10),
               ...p.inventory
                   .where((i) => i.status == InventoryStatus.sinStock)
@@ -155,7 +207,15 @@ class DashboardScreen extends StatelessWidget {
             ],
 
             // Recent tasks
-            const SectionTitle('TAREAS RECIENTES'),
+            SectionTitle(
+              'TAREAS RECIENTES',
+              trailing: TextButton(
+                onPressed: onActiveTasks,
+                child: const Text('Ver todas',
+                    style:
+                        TextStyle(color: AppTheme.accent, fontSize: 12)),
+              ),
+            ),
             const SizedBox(height: 10),
             ...p.tasks
                 .where((t) =>
@@ -234,11 +294,21 @@ class _CertAlert extends StatelessWidget {
               color: AppTheme.warningColor, size: 20),
           const SizedBox(width: 10),
           Expanded(
-            child: Text(cert.name,
-                style: const TextStyle(
-                    color: AppTheme.textPrimary,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(cert.name,
+                    style: const TextStyle(
+                        color: AppTheme.textPrimary,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13)),
+                if (cert.certCategory == 'tripulante' &&
+                    cert.crewMemberName != null)
+                  Text('Tripulante: ${cert.crewMemberName}',
+                      style: const TextStyle(
+                          color: AppTheme.textSecondary, fontSize: 11)),
+              ],
+            ),
           ),
           AlertBadge(cert.alertLevel, cert.daysUntilExpiry),
         ],

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../config/theme.dart';
+import '../models/models.dart';
 import '../providers/app_provider.dart';
 import '../services/connectivity_service.dart';
 import 'login_screen.dart';
@@ -11,6 +12,7 @@ import 'manager/certificates_screen.dart';
 import 'manager/inventory_screen.dart';
 import 'manager/owner_preferences_screen.dart';
 import 'manager/document_scan_screen.dart';
+import 'manager/incidents_screen.dart';
 
 class ManagerHome extends StatefulWidget {
   const ManagerHome({super.key});
@@ -22,18 +24,67 @@ class ManagerHome extends StatefulWidget {
 class _ManagerHomeState extends State<ManagerHome> {
   int _currentIndex = 0;
 
-  final _screens = const [
-    DashboardScreen(),
-    TasksScreen(),
-    CrewScreen(),
-    CertificatesScreen(),
-    InventoryScreen(),
-  ];
+  // Navigation state for dashboard → screen
+  Key _tasksKey = const Key('tasks-init');
+  int _tasksInitialTab = 0;
+  Key _inventoryKey = const Key('inventory-init');
+  InventoryStatus? _inventoryInitialFilter;
+
+  void _goToTasks({int tab = 0}) {
+    setState(() {
+      _tasksInitialTab = tab;
+      _tasksKey = UniqueKey();
+      _currentIndex = 1;
+    });
+  }
+
+  void _goToInventory({InventoryStatus? filter}) {
+    setState(() {
+      _inventoryInitialFilter = filter;
+      _inventoryKey = UniqueKey();
+      _currentIndex = 4;
+    });
+  }
+
+  void _switchProfile() {
+    context.read<AppProvider>().logout();
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      (_) => false,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final user = context.watch<AppProvider>().currentUser;
     final isOnline = context.watch<ConnectivityService>().isOnline;
+
+    final screens = [
+      DashboardScreen(
+        onActiveTasks: () => _goToTasks(tab: 0),
+        onRejectedTasks: () => _goToTasks(tab: 1),
+        onIncidents: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const IncidentsScreen()),
+        ),
+        onCertificates: () => setState(() => _currentIndex = 3),
+        onLowStock: () => _goToInventory(filter: InventoryStatus.bajo),
+        onDocScan: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const DocumentScanScreen()),
+        ),
+      ),
+      TasksScreen(
+        key: _tasksKey,
+        initialTab: _tasksInitialTab,
+      ),
+      const CrewScreen(),
+      const CertificatesScreen(),
+      InventoryScreen(
+        key: _inventoryKey,
+        initialFilter: _inventoryInitialFilter,
+      ),
+    ];
 
     return Scaffold(
       drawer: NavigationDrawer(
@@ -48,9 +99,12 @@ class _ManagerHomeState extends State<ManagerHome> {
                   children: [
                     CircleAvatar(
                       radius: 26,
-                      backgroundColor: AppTheme.accent.withValues(alpha: 0.2),
+                      backgroundColor:
+                          AppTheme.accent.withValues(alpha: 0.2),
                       child: Text(
-                        user?.name.isNotEmpty == true ? user!.name[0] : 'G',
+                        user?.name.isNotEmpty == true
+                            ? user!.name[0]
+                            : 'G',
                         style: const TextStyle(
                             color: AppTheme.accent,
                             fontSize: 22,
@@ -77,8 +131,8 @@ class _ManagerHomeState extends State<ManagerHome> {
                         fontSize: 15,
                         fontWeight: FontWeight.w600)),
                 const Text('Gestor / Capitán',
-                    style:
-                        TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                    style: TextStyle(
+                        color: AppTheme.textSecondary, fontSize: 12)),
               ],
             ),
           ),
@@ -96,7 +150,8 @@ class _ManagerHomeState extends State<ManagerHome> {
             },
           ),
           ListTile(
-            leading: const Icon(Icons.document_scanner_outlined, color: AppTheme.accent),
+            leading: const Icon(Icons.document_scanner_outlined,
+                color: AppTheme.accent),
             title: const Text('Escanear Documento',
                 style: TextStyle(color: AppTheme.textPrimary)),
             onTap: () {
@@ -107,10 +162,32 @@ class _ManagerHomeState extends State<ManagerHome> {
                       builder: (_) => const DocumentScanScreen()));
             },
           ),
+          ListTile(
+            leading:
+                const Icon(Icons.warning_amber_outlined, color: AppTheme.accent),
+            title: const Text('Incidencias',
+                style: TextStyle(color: AppTheme.textPrimary)),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const IncidentsScreen()));
+            },
+          ),
           const Divider(color: AppTheme.dividerColor),
           ListTile(
             leading:
-                const Icon(Icons.logout, color: AppTheme.errorColor),
+                const Icon(Icons.switch_account, color: AppTheme.accent),
+            title: const Text('Cambiar de perfil',
+                style: TextStyle(color: AppTheme.textPrimary)),
+            onTap: () {
+              Navigator.pop(context);
+              _switchProfile();
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.logout, color: AppTheme.errorColor),
             title: const Text('Cerrar Sesión',
                 style: TextStyle(color: AppTheme.errorColor)),
             onTap: () {
@@ -123,7 +200,7 @@ class _ManagerHomeState extends State<ManagerHome> {
           ),
         ],
       ),
-      body: _screens[_currentIndex],
+      body: screens[_currentIndex],
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
         onDestinationSelected: (i) => setState(() => _currentIndex = i),
@@ -141,9 +218,9 @@ class _ManagerHomeState extends State<ManagerHome> {
           ),
           NavigationDestination(
             icon: Badge(
-              isLabelVisible: context.watch<AppProvider>().activeTasks > 0,
-              label:
-                  Text('${context.watch<AppProvider>().activeTasks}'),
+              isLabelVisible:
+                  context.watch<AppProvider>().activeTasks > 0,
+              label: Text('${context.watch<AppProvider>().activeTasks}'),
               child: const Icon(Icons.task_alt_outlined),
             ),
             selectedIcon: const Icon(Icons.task_alt),
@@ -169,8 +246,8 @@ class _ManagerHomeState extends State<ManagerHome> {
             icon: Badge(
               isLabelVisible:
                   context.watch<AppProvider>().lowStockItems > 0,
-              label:
-                  Text('${context.watch<AppProvider>().lowStockItems}'),
+              label: Text(
+                  '${context.watch<AppProvider>().lowStockItems}'),
               child: const Icon(Icons.inventory_2_outlined),
             ),
             selectedIcon: const Icon(Icons.inventory_2),
