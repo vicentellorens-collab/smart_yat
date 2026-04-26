@@ -146,7 +146,7 @@ class AlertBadge extends StatelessWidget {
       AlertLevel.days15 => ('${days}d', AppTheme.errorColor),
       AlertLevel.days30 => ('${days}d', AppTheme.warningColor),
       AlertLevel.days60 => ('${days}d', AppTheme.warningColor),
-      AlertLevel.days90 => ('${days}d', const Color(0xFF60a5fa)),
+      AlertLevel.days90 => ('${days}d', AppTheme.warningColor),
       AlertLevel.none => ('OK', AppTheme.successColor),
     };
     return Container(

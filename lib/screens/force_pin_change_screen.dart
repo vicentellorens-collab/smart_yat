@@ -23,17 +23,17 @@ class _ForcePinChangeScreenState extends State<ForcePinChangeScreen> {
   void _onDigit(String digit) {
     setState(() => _error = null);
     if (!_confirming) {
-      if (_newPin.length >= 6) return;
+      if (_newPin.length >= 4) return;
       setState(() => _newPin += digit);
-      if (_newPin.length >= 4) {
+      if (_newPin.length == 4) {
         Future.delayed(const Duration(milliseconds: 400), () {
           if (mounted) setState(() => _confirming = true);
         });
       }
     } else {
-      if (_confirmPin.length >= 6) return;
+      if (_confirmPin.length >= 4) return;
       setState(() => _confirmPin += digit);
-      if (_confirmPin.length >= 4) _tryChange();
+      if (_confirmPin.length == 4) _tryChange();
     }
   }
 
@@ -129,7 +129,7 @@ class _ForcePinChangeScreenState extends State<ForcePinChangeScreen> {
                 Text(
                   _confirming
                       ? 'Repite el PIN para confirmarlo'
-                      : 'Elige un PIN de 4-6 dígitos (no puede ser 0000)',
+                      : 'El PIN debe tener exactamente 4 dígitos (no puede ser 0000)',
                   style: const TextStyle(
                       color: AppTheme.textSecondary, fontSize: 12),
                   textAlign: TextAlign.center,
@@ -138,7 +138,7 @@ class _ForcePinChangeScreenState extends State<ForcePinChangeScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: List.generate(
-                    6,
+                    4,
                     (i) => Container(
                       margin: const EdgeInsets.symmetric(horizontal: 6),
                       width: 14,

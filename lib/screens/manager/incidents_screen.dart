@@ -146,11 +146,13 @@ class _IncidentCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final statusColor = switch (incident.status) {
       IncidentStatus.abierta => AppTheme.errorColor,
+      IncidentStatus.asignada => AppTheme.accent,
       IncidentStatus.enProgreso => AppTheme.warningColor,
       IncidentStatus.resuelta => AppTheme.successColor,
     };
     final statusLabel = switch (incident.status) {
       IncidentStatus.abierta => 'ABIERTA',
+      IncidentStatus.asignada => 'ASIGNADA',
       IncidentStatus.enProgreso => 'EN PROGRESO',
       IncidentStatus.resuelta => 'RESUELTA',
     };
@@ -219,10 +221,39 @@ class _IncidentCard extends StatelessWidget {
                       color: AppTheme.textSecondary, fontSize: 11)),
             ],
           ),
+          if (incident.assignedToName != null) ...[
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                const Icon(Icons.person_outline, color: AppTheme.accent, size: 13),
+                const SizedBox(width: 4),
+                Text(
+                  'Asignada a: ${incident.assignedToName}',
+                  style: const TextStyle(
+                      color: AppTheme.accent,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500),
+                ),
+              ],
+            ),
+          ],
           const SizedBox(height: 10),
           Row(
             children: [
-              if (incident.status == IncidentStatus.abierta) ...[
+              if (incident.status == IncidentStatus.abierta)
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => _showAssignSheet(context),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppTheme.accent,
+                      side: const BorderSide(color: AppTheme.accent),
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      textStyle: const TextStyle(fontSize: 12),
+                    ),
+                    child: const Text('Asignar a...'),
+                  ),
+                ),
+              if (incident.status == IncidentStatus.asignada) ...[
                 Expanded(
                   child: OutlinedButton(
                     onPressed: () {
@@ -231,8 +262,7 @@ class _IncidentCard extends StatelessWidget {
                     },
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppTheme.warningColor,
-                      side:
-                          const BorderSide(color: AppTheme.warningColor),
+                      side: const BorderSide(color: AppTheme.warningColor),
                       padding: const EdgeInsets.symmetric(vertical: 6),
                       textStyle: const TextStyle(fontSize: 12),
                     ),
@@ -240,25 +270,123 @@ class _IncidentCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-              ],
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () {
-                    incident.status = IncidentStatus.resuelta;
-                    context.read<AppProvider>().updateIncident(incident);
-                  },
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppTheme.successColor,
-                    side: const BorderSide(color: AppTheme.successColor),
-                    padding: const EdgeInsets.symmetric(vertical: 6),
-                    textStyle: const TextStyle(fontSize: 12),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () {
+                      incident.status = IncidentStatus.resuelta;
+                      context.read<AppProvider>().updateIncident(incident);
+                    },
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppTheme.successColor,
+                      side: const BorderSide(color: AppTheme.successColor),
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      textStyle: const TextStyle(fontSize: 12),
+                    ),
+                    child: const Text('Resolver'),
                   ),
-                  child: const Text('Resolver'),
+                ),
+              ],
+              if (incident.status == IncidentStatus.enProgreso)
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () {
+                      incident.status = IncidentStatus.resuelta;
+                      context.read<AppProvider>().updateIncident(incident);
+                    },
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppTheme.successColor,
+                      side: const BorderSide(color: AppTheme.successColor),
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      textStyle: const TextStyle(fontSize: 12),
+                    ),
+                    child: const Text('Resolver'),
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAssignSheet(BuildContext context) {
+    final crew = context.read<AppProvider>().crew;
+    CrewMember? selectedCrew;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) => Padding(
+          padding: EdgeInsets.fromLTRB(
+              20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('ASIGNAR INCIDENCIA', style: AppTheme.orbitron(size: 14)),
+              const SizedBox(height: 4),
+              Text(
+                incident.title,
+                style: const TextStyle(
+                    color: AppTheme.textSecondary, fontSize: 13),
+                maxLines: 2,
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<CrewMember>(
+                value: selectedCrew,
+                decoration:
+                    const InputDecoration(labelText: 'Asignar a tripulante'),
+                dropdownColor: AppTheme.panel,
+                items: crew
+                    .map((c) => DropdownMenuItem(
+                          value: c,
+                          child: Text(c.name,
+                              style: const TextStyle(
+                                  color: AppTheme.textPrimary)),
+                        ))
+                    .toList(),
+                onChanged: (v) => setModalState(() => selectedCrew = v),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Se creará automáticamente una tarea urgente para el tripulante.',
+                style: const TextStyle(
+                    color: AppTheme.textSecondary, fontSize: 11),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: selectedCrew == null
+                      ? null
+                      : () {
+                          final p = context.read<AppProvider>();
+                          incident.status = IncidentStatus.asignada;
+                          incident.assignedToId = selectedCrew!.id;
+                          incident.assignedToName = selectedCrew!.name;
+                          p.updateIncident(incident);
+                          p.addTask(Task(
+                            id: DateTime.now()
+                                .millisecondsSinceEpoch
+                                .toString(),
+                            title: 'INCIDENCIA: ${incident.title}',
+                            description: incident.description.isNotEmpty
+                                ? incident.description
+                                : incident.title,
+                            assignedToId: selectedCrew!.id,
+                            assignedToName: selectedCrew!.name,
+                            priority: TaskPriority.alta,
+                            createdAt: DateTime.now(),
+                          ));
+                          Navigator.pop(ctx);
+                        },
+                  child: const Text('ASIGNAR Y CREAR TAREA'),
                 ),
               ),
             ],
           ),
-        ],
+        ),
       ),
     );
   }

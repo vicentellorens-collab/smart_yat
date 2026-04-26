@@ -597,6 +597,28 @@ class AppProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> resetCrewPinByAdmin(String userId, String tempPin) async {
+    final idx = _users.indexWhere((u) => u.id == userId);
+    if (idx == -1) return;
+    final u = _users[idx];
+    _users[idx] = AppUser(
+      id: u.id,
+      name: u.name,
+      role: u.role,
+      pin: AuthService.hashPin(tempPin),
+      isAdmin: u.isAdmin,
+      yachtId: u.yachtId,
+      yachtName: u.yachtName,
+      accountExpiresAt: u.accountExpiresAt,
+      accountStatus: u.accountStatus,
+      mustChangePIN: true,
+      email: u.email,
+    );
+    await _storage.saveUsers(_users);
+    unawaited(_cloud.upsertUser(_users[idx]));
+    notifyListeners();
+  }
+
   Future<void> resetCrewPin(String userId, String newPin) async {
     final idx = _users.indexWhere((u) => u.id == userId);
     if (idx == -1) return;
@@ -851,21 +873,6 @@ class AppProvider extends ChangeNotifier {
           match.quantity = 0;
           await updateInventoryItem(match);
         }
-        break;
-      case 'PREFERENCIA_OWNER':
-        final tipo = _str(result.datosExtraidos['tipo']) ?? 'otro';
-        final positivo = result.datosExtraidos['positivo'];
-        await addOwnerPreference(OwnerPreference(
-          id: id,
-          type: OwnerPreferenceType.values.firstWhere(
-            (e) => e.name == tipo,
-            orElse: () => OwnerPreferenceType.otro,
-          ),
-          detail: _str(result.datosExtraidos['detalle']) ?? cmd.transcript,
-          isPositive: positivo is bool ? positivo : true,
-          createdAt: now,
-          viaHeyYat: true,
-        ));
         break;
       case 'EVENTO':
         await addTask(Task(

@@ -8,7 +8,7 @@ enum TaskStatus { pendiente, enProgreso, completada, rechazada }
 
 enum TaskPriority { alta, media, baja }
 
-enum IncidentStatus { abierta, enProgreso, resuelta }
+enum IncidentStatus { abierta, asignada, enProgreso, resuelta }
 
 enum InventoryStatus { ok, bajo, sinStock }
 
@@ -94,6 +94,18 @@ class YachtConfig {
   Map<String, dynamic> toJson() => {'id': id, 'name': name, 'adminId': adminId, 'createdAt': createdAt.toIso8601String()};
 }
 
+// ==================== CHECKLIST ITEM ====================
+
+class ChecklistItem {
+  final String id;
+  String text;
+  bool done;
+  ChecklistItem({required this.id, required this.text, this.done = false});
+  Map<String, dynamic> toJson() => {'id': id, 'text': text, 'done': done};
+  factory ChecklistItem.fromJson(Map<String, dynamic> j) =>
+      ChecklistItem(id: j['id'], text: j['text'], done: j['done'] ?? false);
+}
+
 // ==================== TASK ====================
 
 class Task {
@@ -112,6 +124,7 @@ class Task {
   String? completionComment;
   String? actionBy;
   DateTime? actionAt;
+  List<ChecklistItem> checklist;
 
   Task({
     required this.id,
@@ -128,7 +141,8 @@ class Task {
     this.completionComment,
     this.actionBy,
     this.actionAt,
-  });
+    List<ChecklistItem>? checklist,
+  }) : checklist = checklist ?? [];
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -145,6 +159,7 @@ class Task {
         'completionComment': completionComment,
         'actionBy': actionBy,
         'actionAt': actionAt?.toIso8601String(),
+        'checklist': checklist.map((c) => c.toJson()).toList(),
       };
 
   factory Task.fromJson(Map<String, dynamic> json) => Task(
@@ -171,6 +186,9 @@ class Task {
         completionComment: json['completionComment'],
         actionBy: json['actionBy'],
         actionAt: json['actionAt'] != null ? DateTime.tryParse(json['actionAt']) : null,
+        checklist: (json['checklist'] as List? ?? [])
+            .map((j) => ChecklistItem.fromJson(j as Map<String, dynamic>))
+            .toList(),
       );
 }
 
@@ -381,6 +399,8 @@ class Incident {
   String reportedBy;
   DateTime reportedAt;
   String? resolution;
+  String? assignedToId;
+  String? assignedToName;
 
   Incident({
     required this.id,
@@ -392,6 +412,8 @@ class Incident {
     required this.reportedBy,
     required this.reportedAt,
     this.resolution,
+    this.assignedToId,
+    this.assignedToName,
   });
 
   Map<String, dynamic> toJson() => {
@@ -404,6 +426,8 @@ class Incident {
         'reportedBy': reportedBy,
         'reportedAt': reportedAt.toIso8601String(),
         'resolution': resolution,
+        'assignedToId': assignedToId,
+        'assignedToName': assignedToName,
       };
 
   factory Incident.fromJson(Map<String, dynamic> json) => Incident(
@@ -422,6 +446,8 @@ class Incident {
         reportedBy: json['reportedBy'],
         reportedAt: DateTime.parse(json['reportedAt']),
         resolution: json['resolution'],
+        assignedToId: json['assignedToId'],
+        assignedToName: json['assignedToName'],
       );
 }
 

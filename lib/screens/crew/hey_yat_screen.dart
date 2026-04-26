@@ -8,7 +8,6 @@ import '../../models/models.dart';
 import '../../providers/app_provider.dart';
 import '../../services/ai_service.dart';
 import '../../services/connectivity_service.dart';
-import '../../services/tts_service.dart';
 import '../../widgets/common_widgets.dart';
 import '../../main.dart' show ttsService;
 
@@ -40,6 +39,8 @@ class _HeyYatScreenState extends State<HeyYatScreen>
   String? _errorMsg;
   bool _showManualInput = false;
   bool _ttsEnabled = true;
+  bool _processingQueue = false;
+  ConnectivityService? _connectivityService;
 
   late AnimationController _pulseCtrl;
   late Animation<double> _pulseAnim;
@@ -62,6 +63,39 @@ class _HeyYatScreenState extends State<HeyYatScreen>
       duration: const Duration(seconds: 2),
     );
     _initSpeech();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _connectivityService = context.read<ConnectivityService>();
+      _connectivityService!.addListener(_onConnectivityRestored);
+    });
+  }
+
+  void _onConnectivityRestored() {
+    if (_connectivityService?.isOnline == true) {
+      _processPendingQueue();
+    }
+  }
+
+  Future<void> _processPendingQueue() async {
+    final provider = context.read<AppProvider>();
+    final pending =
+        provider.pendingVoiceMessages.where((m) => !m.processed).toList();
+    if (pending.isEmpty) return;
+
+    setState(() => _processingQueue = true);
+    final inventoryItems =
+        provider.inventory.map((i) => i.name).toList();
+    await provider.processPendingMessages(
+        (t) => _ai.classify(t, inventoryItems: inventoryItems));
+    if (mounted) {
+      setState(() => _processingQueue = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+              '${pending.length} mensaje${pending.length != 1 ? "s" : ""} offline procesado${pending.length != 1 ? "s" : ""}'),
+          backgroundColor: AppTheme.successColor,
+        ),
+      );
+    }
   }
 
   Future<void> _initSpeech() async {
@@ -121,11 +155,10 @@ class _HeyYatScreenState extends State<HeyYatScreen>
   }
 
   void _onResult(SpeechRecognitionResult result) {
+    // Update transcript in real-time (partialResults: true shows progress)
     setState(() => _transcript = result.recognizedWords);
-    if (result.finalResult && _transcript.isNotEmpty) {
-      _speech.stop();
-      _processTranscript(_transcript);
-    }
+    // Do NOT stop on finalResult — let _onSpeechStatus handle completion
+    // so the full pauseFor silence timer runs before cutting off.
   }
 
   Future<void> _stopListening() async {
@@ -166,7 +199,10 @@ class _HeyYatScreenState extends State<HeyYatScreen>
     _spinCtrl.repeat();
 
     try {
-      final result = await _ai.classify(text);
+      final inventoryItems =
+          context.read<AppProvider>().inventory.map((i) => i.name).toList();
+      final result =
+          await _ai.classify(text, inventoryItems: inventoryItems);
       if (mounted) {
         setState(() {
           _result = result;
@@ -229,6 +265,7 @@ class _HeyYatScreenState extends State<HeyYatScreen>
 
   @override
   void dispose() {
+    _connectivityService?.removeListener(_onConnectivityRestored);
     _pulseCtrl.dispose();
     _spinCtrl.dispose();
     _speech.stop();
@@ -313,8 +350,34 @@ class _HeyYatScreenState extends State<HeyYatScreen>
             style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
           ),
 
-          // Offline queue badge
-          if (pendingCount > 0) ...[
+          // Processing queue badge
+          if (_processingQueue) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppTheme.accent.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                    color: AppTheme.accent.withValues(alpha: 0.4)),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    width: 12,
+                    height: 12,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: AppTheme.accent),
+                  ),
+                  SizedBox(width: 8),
+                  Text('Procesando mensajes offline...',
+                      style: TextStyle(
+                          color: AppTheme.accent, fontSize: 11)),
+                ],
+              ),
+            ),
+          ] else if (pendingCount > 0) ...[
             const SizedBox(height: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),

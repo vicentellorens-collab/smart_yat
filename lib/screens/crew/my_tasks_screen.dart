@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 import '../../config/theme.dart';
 import '../../models/models.dart';
 import '../../providers/app_provider.dart';
@@ -136,6 +137,60 @@ class _ActiveTaskCard extends StatelessWidget {
             Text(task.description,
                 style: const TextStyle(
                     color: AppTheme.textSecondary, fontSize: 13)),
+          ],
+          if (task.checklist.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                const Icon(Icons.checklist, color: AppTheme.accent, size: 14),
+                const SizedBox(width: 6),
+                Text(
+                  'Checklist (${task.checklist.where((i) => i.done).length}/${task.checklist.length})',
+                  style: const TextStyle(
+                      color: AppTheme.accent,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            ...task.checklist.map((item) => InkWell(
+                  onTap: () {
+                    item.done = !item.done;
+                    context.read<AppProvider>().updateTask(task);
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Row(
+                      children: [
+                        Icon(
+                          item.done
+                              ? Icons.check_box
+                              : Icons.check_box_outline_blank,
+                          color: item.done
+                              ? AppTheme.successColor
+                              : AppTheme.textSecondary,
+                          size: 18,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            item.text,
+                            style: TextStyle(
+                              color: item.done
+                                  ? AppTheme.textSecondary
+                                  : AppTheme.textPrimary,
+                              fontSize: 13,
+                              decoration: item.done
+                                  ? TextDecoration.lineThrough
+                                  : null,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                )),
           ],
           const SizedBox(height: 14),
           Row(
@@ -336,6 +391,24 @@ class _DoneTaskCard extends StatelessWidget {
               TaskStatusChip(task.status),
             ],
           ),
+          if (task.completedAt != null &&
+              task.status == TaskStatus.completada) ...[
+            const SizedBox(height: 4),
+            Text(
+              'Completada el ${DateFormat('dd/MM/yyyy \'a las\' HH:mm').format(task.completedAt!)}',
+              style: const TextStyle(
+                  color: AppTheme.successColor, fontSize: 10),
+            ),
+          ],
+          if (task.actionAt != null &&
+              task.status == TaskStatus.rechazada) ...[
+            const SizedBox(height: 4),
+            Text(
+              'Rechazada el ${DateFormat('dd/MM/yyyy \'a las\' HH:mm').format(task.actionAt!)}',
+              style: const TextStyle(
+                  color: AppTheme.errorColor, fontSize: 10),
+            ),
+          ],
           if (task.completionComment != null && task.completionComment!.isNotEmpty) ...[
             const SizedBox(height: 6),
             Row(

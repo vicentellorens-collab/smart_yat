@@ -66,7 +66,7 @@ class _WelcomeView extends StatelessWidget {
               border: Border.all(color: AppTheme.accent, width: 2),
               color: AppTheme.panel,
             ),
-            child: const Icon(Icons.sailing, color: AppTheme.accent, size: 50),
+            child: const Center(child: _YachtLogo(size: 62, color: AppTheme.accent)),
           ),
           const SizedBox(height: 28),
           Text('SmartCrew', style: AppTheme.orbitron(size: 28)),
@@ -163,8 +163,8 @@ class _RegisterViewState extends State<_RegisterView> {
       _snack('Completa todos los campos obligatorios');
       return;
     }
-    if (pin.length < 4) {
-      _snack('El PIN debe tener al menos 4 dígitos');
+    if (pin.length != 4) {
+      _snack('El PIN debe tener exactamente 4 dígitos');
       return;
     }
     if (pin != confirm) {
@@ -257,12 +257,12 @@ class _RegisterViewState extends State<_RegisterView> {
             controller: _pinCtrl,
             style: const TextStyle(color: AppTheme.textPrimary),
             decoration: const InputDecoration(
-              labelText: 'PIN (mín. 4 dígitos) *',
+              labelText: 'PIN (exactamente 4 dígitos) *',
               prefixIcon: Icon(Icons.lock_outline, color: AppTheme.textSecondary),
             ),
             keyboardType: TextInputType.number,
             obscureText: true,
-            maxLength: 6,
+            maxLength: 4,
           ),
           const SizedBox(height: 12),
           TextField(
@@ -274,7 +274,7 @@ class _RegisterViewState extends State<_RegisterView> {
             ),
             keyboardType: TextInputType.number,
             obscureText: true,
-            maxLength: 6,
+            maxLength: 4,
           ),
           const SizedBox(height: 28),
           SizedBox(
@@ -320,7 +320,7 @@ class _LoginViewState extends State<_LoginView> {
   }
 
   void _onNumpad(String digit) {
-    if (_pin.length >= 6) return;
+    if (_pin.length >= 4) return;
     setState(() {
       _pin += digit;
       _error = null;
@@ -373,6 +373,155 @@ class _LoginViewState extends State<_LoginView> {
             : const CrewHome(),
       ));
     }
+  }
+
+  void _showAdminRecovery(BuildContext context) {
+    final yachtCtrl = TextEditingController();
+    final pin1Ctrl = TextEditingController();
+    final pin2Ctrl = TextEditingController();
+    bool verified = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) => Padding(
+          padding: EdgeInsets.fromLTRB(
+              24, 24, 24, MediaQuery.of(ctx).viewInsets.bottom + 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('RECUPERAR PIN ADMIN',
+                  style: AppTheme.orbitron(size: 14)),
+              const SizedBox(height: 8),
+              if (!verified) ...[
+                const Text(
+                  'Para verificar tu identidad, introduce el nombre del yate tal como lo registraste.',
+                  style: TextStyle(
+                      color: AppTheme.textSecondary, fontSize: 12),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: yachtCtrl,
+                  style: const TextStyle(color: AppTheme.textPrimary),
+                  decoration: const InputDecoration(
+                    labelText: 'Nombre del yate',
+                    prefixIcon: Icon(Icons.sailing,
+                        color: AppTheme.textSecondary),
+                  ),
+                  textCapitalization: TextCapitalization.words,
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      final enteredName =
+                          yachtCtrl.text.trim().toLowerCase();
+                      final storedName =
+                          (_selectedUser!.yachtName ?? '').toLowerCase();
+                      if (enteredName.isEmpty ||
+                          enteredName != storedName) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                                'Nombre de yate incorrecto'),
+                            backgroundColor: AppTheme.errorColor,
+                          ),
+                        );
+                        return;
+                      }
+                      setModalState(() => verified = true);
+                    },
+                    child: const Text('VERIFICAR'),
+                  ),
+                ),
+              ] else ...[
+                const Text(
+                  'Verificación correcta. Define tu nuevo PIN de 4 dígitos.',
+                  style: TextStyle(
+                      color: AppTheme.successColor, fontSize: 12),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: pin1Ctrl,
+                  style: const TextStyle(color: AppTheme.textPrimary),
+                  decoration: const InputDecoration(
+                    labelText: 'Nuevo PIN (4 dígitos)',
+                    prefixIcon: Icon(Icons.lock_outline,
+                        color: AppTheme.textSecondary),
+                  ),
+                  keyboardType: TextInputType.number,
+                  obscureText: true,
+                  maxLength: 4,
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: pin2Ctrl,
+                  style: const TextStyle(color: AppTheme.textPrimary),
+                  decoration: const InputDecoration(
+                    labelText: 'Confirmar nuevo PIN',
+                    prefixIcon: Icon(Icons.lock_outline,
+                        color: AppTheme.textSecondary),
+                  ),
+                  keyboardType: TextInputType.number,
+                  obscureText: true,
+                  maxLength: 4,
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      final p1 = pin1Ctrl.text.trim();
+                      final p2 = pin2Ctrl.text.trim();
+                      if (p1.length != 4) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                                'El PIN debe tener exactamente 4 dígitos'),
+                            backgroundColor: AppTheme.warningColor,
+                          ),
+                        );
+                        return;
+                      }
+                      if (p1 != p2) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Los PINs no coinciden'),
+                            backgroundColor: AppTheme.warningColor,
+                          ),
+                        );
+                        return;
+                      }
+                      await context
+                          .read<AppProvider>()
+                          .resetCrewPin(_selectedUser!.id, p1);
+                      if (ctx.mounted) Navigator.pop(ctx);
+                      if (context.mounted) {
+                        setState(() {
+                          _pin = '';
+                          _error = null;
+                        });
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                                'PIN actualizado. Ahora accede con tu nuevo PIN.'),
+                            backgroundColor: AppTheme.successColor,
+                          ),
+                        );
+                      }
+                    },
+                    child: const Text('GUARDAR NUEVO PIN'),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -473,7 +622,7 @@ class _LoginViewState extends State<_LoginView> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: List.generate(
-              6,
+              4,
               (i) => Container(
                 margin: const EdgeInsets.symmetric(horizontal: 6),
                 width: 14,
@@ -501,6 +650,17 @@ class _LoginViewState extends State<_LoginView> {
             onDigit: _onNumpad,
             onDelete: _onDelete,
           ),
+          if (_selectedUser!.isAdmin) ...[
+            const SizedBox(height: 16),
+            TextButton(
+              onPressed: () => _showAdminRecovery(context),
+              child: const Text(
+                '¿Olvidaste tu PIN?',
+                style: TextStyle(
+                    color: AppTheme.textSecondary, fontSize: 12),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -660,4 +820,92 @@ class _NumPadKey extends StatelessWidget {
       ),
     );
   }
+}
+
+// ==================== YACHT LOGO ====================
+
+class _YachtLogo extends StatelessWidget {
+  final double size;
+  final Color color;
+  const _YachtLogo({required this.size, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      size: Size(size, size * 0.65),
+      painter: _YachtPainter(color),
+    );
+  }
+}
+
+class _YachtPainter extends CustomPainter {
+  final Color color;
+  _YachtPainter(this.color);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+    final fill = Paint()..color = color..style = PaintingStyle.fill;
+    final mast = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = w * 0.038
+      ..strokeCap = StrokeCap.round;
+
+    // Hull — trapezoidal base
+    canvas.drawPath(
+      Path()
+        ..moveTo(w * 0.02, h * 0.72)
+        ..lineTo(w * 0.00, h * 0.88)
+        ..lineTo(w * 1.00, h * 0.88)
+        ..lineTo(w * 0.94, h * 0.72)
+        ..close(),
+      fill,
+    );
+
+    // Main superstructure
+    canvas.drawPath(
+      Path()
+        ..moveTo(w * 0.06, h * 0.72)
+        ..lineTo(w * 0.06, h * 0.54)
+        ..lineTo(w * 0.83, h * 0.54)
+        ..lineTo(w * 0.91, h * 0.72)
+        ..close(),
+      fill,
+    );
+
+    // Bridge deck
+    canvas.drawPath(
+      Path()
+        ..moveTo(w * 0.10, h * 0.54)
+        ..lineTo(w * 0.10, h * 0.38)
+        ..lineTo(w * 0.60, h * 0.38)
+        ..lineTo(w * 0.67, h * 0.54)
+        ..close(),
+      fill,
+    );
+
+    // Top deck
+    canvas.drawPath(
+      Path()
+        ..moveTo(w * 0.14, h * 0.38)
+        ..lineTo(w * 0.14, h * 0.26)
+        ..lineTo(w * 0.44, h * 0.26)
+        ..lineTo(w * 0.50, h * 0.38)
+        ..close(),
+      fill,
+    );
+
+    // Mast
+    canvas.drawLine(
+        Offset(w * 0.32, h * 0.26), Offset(w * 0.32, h * 0.05), mast);
+
+    // Radar arm
+    canvas.drawLine(
+        Offset(w * 0.22, h * 0.13), Offset(w * 0.42, h * 0.13), mast);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter _) => false;
 }

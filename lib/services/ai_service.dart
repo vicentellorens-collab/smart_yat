@@ -4,19 +4,18 @@ import '../config/api_config.dart';
 import '../models/models.dart';
 
 class AiService {
-  static const String _systemPrompt = '''Eres el asistente inteligente del yate Smart Yat OS. Tu tarea es clasificar mensajes de voz de la tripulación y extraer información relevante.
+  static const String _baseSystemPrompt = '''Eres el asistente inteligente del yate Smart Yat OS. Tu tarea es clasificar mensajes de voz de la tripulación y extraer información relevante.
 
 Clasifica SIEMPRE el mensaje en UNA de estas categorías:
 - INCIDENCIA: Problema técnico, avería, fallo en equipamiento del barco
-- INVENTARIO: Nivel de stock bajo, necesidad de reposición de productos o materiales
-- PREFERENCIA_OWNER: Gustos, preferencias o aversiones personales del propietario del yate
+- INVENTARIO: Nivel de stock bajo, necesidad de reposición de productos o materiales. IMPORTANTE: usa matching semántico, no literal. Si el usuario menciona un producto con sinónimos, plurales, variaciones o descripciones indirectas que coincidan con algún item del inventario, clasifica como INVENTARIO.
 - EVENTO: Actividad planificada, comida especial, reunión, visita o celebración
 - CONSULTA: Pregunta sobre información existente en el sistema
 - TAREA: Trabajo a realizar que no encaja en las categorías anteriores
 
 Responde ÚNICAMENTE con un objeto JSON válido (sin texto adicional antes ni después):
 {
-  "categoria": "INCIDENCIA|INVENTARIO|PREFERENCIA_OWNER|EVENTO|CONSULTA|TAREA",
+  "categoria": "INCIDENCIA|INVENTARIO|EVENTO|CONSULTA|TAREA",
   "prioridad": "alta|media|baja",
   "datos_extraidos": {},
   "respuesta_usuario": "Mensaje corto de confirmación en español"
@@ -25,7 +24,6 @@ Responde ÚNICAMENTE con un objeto JSON válido (sin texto adicional antes ni de
 Campos por categoría:
 - INCIDENCIA: datos_extraidos = {"descripcion": "...", "ubicacion": "...", "urgencia": "alta|media|baja"}
 - INVENTARIO: datos_extraidos = {"producto": "...", "nivel": "bajo|sin_stock|ok", "cantidad_aproximada": "..."}
-- PREFERENCIA_OWNER: datos_extraidos = {"tipo": "comida|bebida|temperatura|musica|eventos|otro", "detalle": "...", "positivo": true|false}
 - EVENTO: datos_extraidos = {"tipo_evento": "...", "detalle": "...", "cuando": "..."}
 - CONSULTA: datos_extraidos = {"sobre": "...", "pregunta_resumida": "..."}
 - TAREA: datos_extraidos = {"descripcion": "...", "urgencia": "alta|media|baja"}
@@ -34,10 +32,20 @@ Prioridad alta: incidencias urgentes, stock crítico, eventos inmediatos.
 Prioridad media: mayoría de casos.
 Prioridad baja: información general, consultas.''';
 
-  Future<AiClassificationResult> classify(String transcript) async {
-    if (ApiConfig.anthropicApiKey == 'YOUR_API_KEY_HERE') {
-      return _mockClassify(transcript);
+  String _buildSystemPrompt(List<String>? inventoryItems) {
+    if (inventoryItems == null || inventoryItems.isEmpty) {
+      return _baseSystemPrompt;
     }
+    final itemsList = inventoryItems.map((i) => '  - $i').join('\n');
+    return '$_baseSystemPrompt\n\nITEMS ACTUALES EN EL INVENTARIO DEL YATE:\n$itemsList\n\nSi el usuario menciona cualquiera de estos items o algo semanticamente relacionado (sinónimos, variaciones, descripciones), clasifica como INVENTARIO y usa el nombre exacto del item en datos_extraidos.producto. Ejemplos: "no queda aceite para los motores" → INVENTARIO (producto: ACEITE MOTOR), "se acabó la lejía" → INVENTARIO.';
+  }
+
+  Future<AiClassificationResult> classify(String transcript,
+      {List<String>? inventoryItems}) async {
+    if (ApiConfig.anthropicApiKey == 'YOUR_API_KEY_HERE') {
+      return _mockClassify(transcript, inventoryItems: inventoryItems);
+    }
+    final systemPrompt = _buildSystemPrompt(inventoryItems);
     try {
       final response = await http
           .post(
@@ -50,7 +58,7 @@ Prioridad baja: información general, consultas.''';
             body: jsonEncode({
               'model': ApiConfig.claudeModel,
               'max_tokens': 512,
-              'system': _systemPrompt,
+              'system': systemPrompt,
               'messages': [
                 {'role': 'user', 'content': transcript}
               ],
@@ -73,7 +81,8 @@ Prioridad baja: información general, consultas.''';
     return _mockClassify(transcript);
   }
 
-  AiClassificationResult _mockClassify(String transcript) {
+  AiClassificationResult _mockClassify(String transcript,
+      {List<String>? inventoryItems}) {
     final t = transcript.toLowerCase();
 
     if (_contains(t, ['vibra', 'avería', 'averia', 'fallo', 'roto', 'rota',
@@ -90,34 +99,31 @@ Prioridad baja: información general, consultas.''';
       );
     }
 
-    if (_contains(t, ['queda poco', 'sin stock', 'acabó', 'acabando',
-        'reponer', 'poca', 'poco', 'lejía', 'aceite', 'combustible', 'agua',
-        'inventario'])) {
+    // Semantic inventory matching against actual inventory items
+    String? matchedInventoryItem;
+    if (inventoryItems != null && inventoryItems.isNotEmpty) {
+      for (final item in inventoryItems) {
+        final itemWords = item.toLowerCase().split(RegExp(r'[\s_]+'));
+        if (itemWords.any((word) => word.length > 2 && t.contains(word))) {
+          matchedInventoryItem = item;
+          break;
+        }
+      }
+    }
+
+    if (matchedInventoryItem != null ||
+        _contains(t, ['queda poco', 'sin stock', 'acabó', 'acabando',
+            'reponer', 'poca', 'poco', 'no queda', 'se acabó', 'se acabo',
+            'lejía', 'aceite', 'combustible', 'inventario'])) {
       return AiClassificationResult(
         categoria: 'INVENTARIO',
         prioridad: 'media',
         datosExtraidos: {
-          'producto': transcript,
+          'producto': matchedInventoryItem ?? transcript,
           'nivel': 'bajo',
           'cantidad_aproximada': 'baja',
         },
         respuestaUsuario: 'Alerta de inventario registrada. Se actualizará el stock.',
-      );
-    }
-
-    if (_contains(t, ['owner', 'propietario', 'le gusta', 'no le gusta',
-        'prefiere', 'le encanta', 'no quiere', 'odia', 'adora'])) {
-      final isPositive = !_contains(t, ['no le gusta', 'no quiere', 'odia', 'no le']);
-      return AiClassificationResult(
-        categoria: 'PREFERENCIA_OWNER',
-        prioridad: 'media',
-        datosExtraidos: {
-          'tipo': _inferPreferenceType(t),
-          'detalle': transcript,
-          'positivo': isPositive,
-        },
-        respuestaUsuario:
-            'Preferencia del owner registrada${isPositive ? " ✓" : " (negativa)"}.',
       );
     }
 
@@ -158,17 +164,4 @@ Prioridad baja: información general, consultas.''';
 
   bool _contains(String text, List<String> keywords) =>
       keywords.any((k) => text.contains(k));
-
-  String _inferPreferenceType(String t) {
-    if (_contains(t, ['comer', 'comida', 'carne', 'pescado', 'sushi', 'fruta',
-        'verdura', 'almuerzo', 'cena', 'desayuno'])) return 'comida';
-    if (_contains(t, ['beber', 'bebida', 'vino', 'champagne', 'cerveza',
-        'agua', 'zumo', 'café', 'té'])) return 'bebida';
-    if (_contains(t, ['temperatura', 'frío', 'frio', 'calor', 'grados',
-        'aire', 'clima'])) return 'temperatura';
-    if (_contains(t, ['música', 'musica', 'canción', 'jazz', 'rock',
-        'silencio', 'sonido'])) return 'musica';
-    if (_contains(t, ['evento', 'fiesta', 'visita', 'reunión'])) return 'eventos';
-    return 'otro';
-  }
 }

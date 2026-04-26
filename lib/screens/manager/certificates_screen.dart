@@ -5,6 +5,43 @@ import '../../models/models.dart';
 import '../../providers/app_provider.dart';
 import '../../widgets/common_widgets.dart';
 
+const _kCertNames = [
+  'STCW Basic Safety Training (BST)',
+  'STCW Advanced Fire Fighting',
+  'STCW Medical First Aid',
+  'STCW Medical Care on Board',
+  'STCW Proficiency in Survival Craft (PSC)',
+  'STCW Officer of the Watch (OOW)',
+  'STCW Master (3000 GT)',
+  'STCW Chief Mate (3000 GT)',
+  'STCW GMDSS Radio Operator (GOC)',
+  'STCW Security Awareness',
+  'STCW Crowd Management',
+  'STCW Passenger Safety',
+  'STCW High Voltage',
+  'STCW Ship Security Officer (SSO)',
+  'STCW Able Seafarer Deck (ASD)',
+  'ENG1 Medical Certificate',
+  'MCA Officer of the Watch (OOW)',
+  'MCA Chief Mate',
+  'MCA Master',
+  'Pasavante',
+  'Certificado de Navegabilidad',
+  'Seguro de Casco',
+  'Certificado de Seguridad del Equipo',
+  'Licencia de Radio GMDSS',
+  'Certificado Sanitario',
+  'Certificado de Arqueo',
+  'Pabellón / Matrícula',
+  'Certificado ISM (Gestión de Seguridad)',
+  'Certificado ISPS',
+  'Certificado MARPOL (Prevención Contaminación)',
+  'Certificado Load Line',
+  'Certificado SOLAS',
+  'Seguro de Responsabilidad Civil',
+  'Otro',
+];
+
 class CertificatesScreen extends StatefulWidget {
   const CertificatesScreen({super.key});
 
@@ -172,7 +209,18 @@ class _CertificatesScreenState extends State<CertificatesScreen>
   }
 
   void _showCertDialog(BuildContext context, [Certificate? existing]) {
-    final nameCtrl = TextEditingController(text: existing?.name);
+    // Determine initial name selection
+    String? selectedCertName;
+    final customNameCtrl = TextEditingController();
+    if (existing != null && existing.name.isNotEmpty) {
+      if (_kCertNames.contains(existing.name)) {
+        selectedCertName = existing.name;
+      } else {
+        selectedCertName = 'Otro';
+        customNameCtrl.text = existing.name;
+      }
+    }
+
     final issuerCtrl = TextEditingController(text: existing?.issuer);
     final typeCtrl = TextEditingController(text: existing?.type);
     DateTime expiryDate =
@@ -255,12 +303,26 @@ class _CertificatesScreenState extends State<CertificatesScreen>
                 ],
 
                 const SizedBox(height: 12),
-                TextField(
-                  controller: nameCtrl,
+                DropdownButtonFormField<String>(
+                  value: selectedCertName,
+                  dropdownColor: AppTheme.panel,
                   style: const TextStyle(color: AppTheme.textPrimary),
-                  decoration:
-                      const InputDecoration(labelText: 'Nombre'),
+                  isExpanded: true,
+                  decoration: const InputDecoration(labelText: 'Nombre del certificado *'),
+                  items: _kCertNames
+                      .map((n) => DropdownMenuItem(value: n, child: Text(n, overflow: TextOverflow.ellipsis)))
+                      .toList(),
+                  onChanged: (v) => setModalState(() => selectedCertName = v),
                 ),
+                if (selectedCertName == 'Otro') ...[
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: customNameCtrl,
+                    style: const TextStyle(color: AppTheme.textPrimary),
+                    decoration: const InputDecoration(labelText: 'Nombre personalizado *'),
+                    textCapitalization: TextCapitalization.sentences,
+                  ),
+                ],
                 const SizedBox(height: 12),
                 TextField(
                   controller: issuerCtrl,
@@ -319,7 +381,10 @@ class _CertificatesScreenState extends State<CertificatesScreen>
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: () {
-                      if (nameCtrl.text.trim().isEmpty) return;
+                      final certName = selectedCertName == 'Otro'
+                          ? customNameCtrl.text.trim()
+                          : (selectedCertName ?? '');
+                      if (certName.isEmpty) return;
                       if (certCategory == 'tripulante' &&
                           selectedCrewId == null) {
                         ScaffoldMessenger.of(context).showSnackBar(
@@ -338,7 +403,7 @@ class _CertificatesScreenState extends State<CertificatesScreen>
                           id: DateTime.now()
                               .millisecondsSinceEpoch
                               .toString(),
-                          name: nameCtrl.text.trim(),
+                          name: certName,
                           issuer: issuerCtrl.text.trim(),
                           type: typeCtrl.text.trim(),
                           expiryDate: expiryDate,
@@ -352,7 +417,7 @@ class _CertificatesScreenState extends State<CertificatesScreen>
                                   : null,
                         ));
                       } else {
-                        existing.name = nameCtrl.text.trim();
+                        existing.name = certName;
                         existing.issuer = issuerCtrl.text.trim();
                         existing.type = typeCtrl.text.trim();
                         existing.expiryDate = expiryDate;
@@ -463,7 +528,7 @@ class _CertCard extends StatelessWidget {
       AlertLevel.days15 => AppTheme.errorColor,
       AlertLevel.days30 => AppTheme.warningColor,
       AlertLevel.days60 => AppTheme.warningColor,
-      AlertLevel.days90 => const Color(0xFF60a5fa),
+      AlertLevel.days90 => AppTheme.warningColor,
       AlertLevel.none => AppTheme.dividerColor,
     };
   }

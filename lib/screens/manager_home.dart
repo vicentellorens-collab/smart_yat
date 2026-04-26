@@ -10,9 +10,9 @@ import 'manager/tasks_screen.dart';
 import 'manager/crew_screen.dart';
 import 'manager/certificates_screen.dart';
 import 'manager/inventory_screen.dart';
-import 'manager/owner_preferences_screen.dart';
 import 'manager/document_scan_screen.dart';
 import 'manager/incidents_screen.dart';
+import 'crew/hey_yat_screen.dart';
 
 class ManagerHome extends StatefulWidget {
   const ManagerHome({super.key});
@@ -84,6 +84,7 @@ class _ManagerHomeState extends State<ManagerHome> {
         key: _inventoryKey,
         initialFilter: _inventoryInitialFilter,
       ),
+      const HeyYatScreen(),
     ];
 
     return Scaffold(
@@ -138,18 +139,6 @@ class _ManagerHomeState extends State<ManagerHome> {
           ),
           const Divider(color: AppTheme.dividerColor),
           ListTile(
-            leading: const Icon(Icons.star_outline, color: AppTheme.accent),
-            title: const Text('Preferencias Owner',
-                style: TextStyle(color: AppTheme.textPrimary)),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (_) => const OwnerPreferencesScreen()));
-            },
-          ),
-          ListTile(
             leading: const Icon(Icons.document_scanner_outlined,
                 color: AppTheme.accent),
             title: const Text('Escanear Documento',
@@ -179,7 +168,7 @@ class _ManagerHomeState extends State<ManagerHome> {
           ListTile(
             leading:
                 const Icon(Icons.switch_account, color: AppTheme.accent),
-            title: const Text('Cambiar de perfil',
+            title: const Text('Cambiar de usuario',
                 style: TextStyle(color: AppTheme.textPrimary)),
             onTap: () {
               Navigator.pop(context);
@@ -200,7 +189,35 @@ class _ManagerHomeState extends State<ManagerHome> {
           ),
         ],
       ),
-      body: screens[_currentIndex],
+      body: Column(
+        children: [
+          if (!isOnline)
+            Material(
+              color: const Color(0xFFef4444),
+              child: SafeArea(
+                top: false,
+                child: Container(
+                  width: double.infinity,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.wifi_off, color: Colors.white, size: 14),
+                      SizedBox(width: 8),
+                      Text('Sin conexión · Modo offline',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600)),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          Expanded(child: screens[_currentIndex]),
+        ],
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
         onDestinationSelected: (i) => setState(() => _currentIndex = i),
@@ -252,6 +269,11 @@ class _ManagerHomeState extends State<ManagerHome> {
             ),
             selectedIcon: const Icon(Icons.inventory_2),
             label: 'Inventario',
+          ),
+          const NavigationDestination(
+            icon: Icon(Icons.mic_outlined),
+            selectedIcon: Icon(Icons.mic),
+            label: 'Hey Yat',
           ),
         ],
       ),

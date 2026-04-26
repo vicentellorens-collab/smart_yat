@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 import '../../config/theme.dart';
 import '../../models/models.dart';
 import '../../providers/app_provider.dart';
@@ -587,57 +588,247 @@ class _TaskCard extends StatelessWidget {
   }
 
   void _showTaskDetails(BuildContext context, Task task) {
+    final crew = context.read<AppProvider>().crew;
+    String? assignedId = task.assignedToId;
+    String? assignedName = task.assignedToName;
+    final instrCtrl = TextEditingController(text: task.description);
+    final checkCtrl = TextEditingController();
+    final localChecklist = List<ChecklistItem>.from(task.checklist);
+
     showModalBottomSheet(
       context: context,
-      builder: (_) => Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(task.title, style: AppTheme.orbitron(size: 15)),
-            const SizedBox(height: 8),
-            Text(task.description,
-                style: const TextStyle(
-                    color: AppTheme.textSecondary, fontSize: 13)),
-            const SizedBox(height: 16),
-            Row(
+      isScrollControlled: true,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) => Padding(
+          padding: EdgeInsets.fromLTRB(
+              20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                PriorityBadge(task.priority),
-                const SizedBox(width: 8),
-                TaskStatusChip(task.status),
+                Text(task.title, style: AppTheme.orbitron(size: 15)),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    PriorityBadge(task.priority),
+                    const SizedBox(width: 8),
+                    TaskStatusChip(task.status),
+                  ],
+                ),
+                if (task.description.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Text(task.description,
+                      style: const TextStyle(
+                          color: AppTheme.textSecondary, fontSize: 13)),
+                ],
+                if (task.completedAt != null) ...[
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      const Icon(Icons.check_circle_outline,
+                          color: AppTheme.successColor, size: 14),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Completada el ${DateFormat('dd/MM/yyyy \'a las\' HH:mm').format(task.completedAt!)}',
+                        style: const TextStyle(
+                            color: AppTheme.successColor, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ],
+                const SizedBox(height: 16),
+                Text('ASIGNACIÓN',
+                    style: AppTheme.orbitron(
+                        size: 11, color: AppTheme.textSecondary)),
+                const SizedBox(height: 10),
+                DropdownButtonFormField<String>(
+                  value: assignedId,
+                  dropdownColor: AppTheme.panel,
+                  style: const TextStyle(color: AppTheme.textPrimary),
+                  decoration: const InputDecoration(
+                    labelText: 'Asignar a tripulante',
+                  ),
+                  items: [
+                    const DropdownMenuItem(
+                        value: null, child: Text('Sin asignar')),
+                    ...crew.map((c) => DropdownMenuItem(
+                          value: c.id,
+                          child: Text(c.name),
+                        )),
+                  ],
+                  onChanged: (v) {
+                    setModalState(() {
+                      assignedId = v;
+                      assignedName = crew
+                          .where((c) => c.id == v)
+                          .map((c) => c.name)
+                          .firstOrNull;
+                    });
+                  },
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: instrCtrl,
+                  style: const TextStyle(color: AppTheme.textPrimary),
+                  maxLines: 2,
+                  decoration: const InputDecoration(
+                    labelText: 'Instrucciones / comentarios',
+                  ),
+                ),
+                const SizedBox(height: 16),
+                // ── CHECKLIST ──
+                Row(
+                  children: [
+                    Text('CHECKLIST',
+                        style: AppTheme.orbitron(
+                            size: 11, color: AppTheme.textSecondary)),
+                    const Spacer(),
+                    Text(
+                      '${localChecklist.where((i) => i.done).length}/${localChecklist.length}',
+                      style: const TextStyle(
+                          color: AppTheme.textSecondary, fontSize: 11),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                ...localChecklist.map((item) => Row(
+                      children: [
+                        SizedBox(
+                          width: 32,
+                          height: 32,
+                          child: Checkbox(
+                            value: item.done,
+                            activeColor: AppTheme.accent,
+                            onChanged: (v) =>
+                                setModalState(() => item.done = v ?? false),
+                          ),
+                        ),
+                        Expanded(
+                          child: Text(
+                            item.text,
+                            style: TextStyle(
+                              color: item.done
+                                  ? AppTheme.textSecondary
+                                  : AppTheme.textPrimary,
+                              fontSize: 13,
+                              decoration: item.done
+                                  ? TextDecoration.lineThrough
+                                  : null,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close,
+                              color: AppTheme.textSecondary, size: 16),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          onPressed: () =>
+                              setModalState(() => localChecklist.remove(item)),
+                        ),
+                      ],
+                    )),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: checkCtrl,
+                        style: const TextStyle(
+                            color: AppTheme.textPrimary, fontSize: 13),
+                        decoration: const InputDecoration(
+                          hintText: 'Añadir elemento al checklist...',
+                          isDense: true,
+                          contentPadding:
+                              EdgeInsets.symmetric(vertical: 8),
+                        ),
+                        onSubmitted: (v) {
+                          if (v.trim().isNotEmpty) {
+                            setModalState(() {
+                              localChecklist.add(ChecklistItem(
+                                id: DateTime.now()
+                                    .millisecondsSinceEpoch
+                                    .toString(),
+                                text: v.trim(),
+                              ));
+                              checkCtrl.clear();
+                            });
+                          }
+                        },
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.add_circle_outline,
+                          color: AppTheme.accent),
+                      onPressed: () {
+                        if (checkCtrl.text.trim().isNotEmpty) {
+                          setModalState(() {
+                            localChecklist.add(ChecklistItem(
+                              id: DateTime.now()
+                                  .millisecondsSinceEpoch
+                                  .toString(),
+                              text: checkCtrl.text.trim(),
+                            ));
+                            checkCtrl.clear();
+                          });
+                        }
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                if (task.status == TaskStatus.pendiente ||
+                    task.status == TaskStatus.enProgreso) ...[
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () {
+                            task.assignedToId = assignedId;
+                            task.assignedToName = assignedName;
+                            task.description = instrCtrl.text.trim();
+                            task.checklist = localChecklist;
+                            context.read<AppProvider>().updateTask(task);
+                            Navigator.pop(ctx);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(assignedId != null
+                                    ? 'Tarea asignada a $assignedName'
+                                    : 'Tarea actualizada'),
+                                backgroundColor: AppTheme.successColor,
+                              ),
+                            );
+                          },
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppTheme.accent,
+                            side: const BorderSide(color: AppTheme.accent),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          child: Text(task.assignedToId == null
+                              ? 'Asignar'
+                              : 'Reasignar'),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            task.status = TaskStatus.completada;
+                            task.completedAt = DateTime.now();
+                            task.assignedToId = assignedId;
+                            task.assignedToName = assignedName;
+                            task.checklist = localChecklist;
+                            context.read<AppProvider>().updateTask(task);
+                            Navigator.pop(ctx);
+                          },
+                          child: const Text('Completada'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ),
-            if (task.assignedToName != null) ...[
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  const Icon(Icons.person_outline,
-                      color: AppTheme.textSecondary, size: 16),
-                  const SizedBox(width: 6),
-                  Text(task.assignedToName!,
-                      style: const TextStyle(
-                          color: AppTheme.textPrimary)),
-                ],
-              ),
-            ],
-            const SizedBox(height: 12),
-            if (task.status == TaskStatus.pendiente ||
-                task.status == TaskStatus.enProgreso) ...[
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    task.status = TaskStatus.completada;
-                    task.completedAt = DateTime.now();
-                    context.read<AppProvider>().updateTask(task);
-                    Navigator.pop(context);
-                  },
-                  child: const Text('Marcar Completada'),
-                ),
-              ),
-            ],
-          ],
+          ),
         ),
       ),
     );
@@ -652,8 +843,6 @@ class _HistoryTaskCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final completedTime =
-        task.completedAt != null ? timeAgo(task.completedAt!) : null;
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -702,14 +891,15 @@ class _HistoryTaskCard extends StatelessWidget {
                         fontSize: 11)),
                 const SizedBox(width: 12),
               ],
-              if (completedTime != null) ...[
+              if (task.completedAt != null) ...[
                 const Icon(Icons.check,
                     color: AppTheme.successColor, size: 13),
                 const SizedBox(width: 4),
-                Text(completedTime,
-                    style: const TextStyle(
-                        color: AppTheme.successColor,
-                        fontSize: 11)),
+                Text(
+                  DateFormat('dd/MM/yyyy HH:mm').format(task.completedAt!),
+                  style: const TextStyle(
+                      color: AppTheme.successColor,
+                      fontSize: 11)),
               ],
               const Spacer(),
               if (task.completionComment != null &&
@@ -818,7 +1008,8 @@ class _RejectedTaskCard extends StatelessWidget {
           if (task.actionBy != null) ...[
             const SizedBox(height: 4),
             Text(
-              'Por: ${task.actionBy} · ${timeAgo(task.actionAt ?? task.createdAt)}',
+              'Rechazada el ${DateFormat('dd/MM/yyyy \'a las\' HH:mm').format(task.actionAt ?? task.createdAt)}'
+              '${task.actionBy != null ? ' · ${task.actionBy}' : ''}',
               style: const TextStyle(
                   color: AppTheme.textSecondary, fontSize: 10),
             ),

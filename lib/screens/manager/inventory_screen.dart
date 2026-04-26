@@ -41,7 +41,16 @@ class _InventoryScreenState extends State<InventoryScreen> {
       });
 
     return Scaffold(
-      appBar: AppBar(title: const Text('INVENTARIO')),
+      appBar: AppBar(
+        title: const Text('INVENTARIO'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.shopping_cart_outlined),
+            tooltip: 'Lista de la compra',
+            onPressed: () => _showShoppingList(context, p),
+          ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showItemDialog(context),
         icon: const Icon(Icons.add),
@@ -104,6 +113,150 @@ class _InventoryScreenState extends State<InventoryScreen> {
                   ),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showShoppingList(BuildContext context, AppProvider p) {
+    final items = [...p.inventory
+        .where((i) => i.status != InventoryStatus.ok)]
+      ..sort((a, b) {
+        const ord = {InventoryStatus.sinStock: 0, InventoryStatus.bajo: 1};
+        return (ord[a.status] ?? 2).compareTo(ord[b.status] ?? 2);
+      });
+    final checked = <String>{};
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) => DraggableScrollableSheet(
+          initialChildSize: 0.6,
+          minChildSize: 0.4,
+          maxChildSize: 0.9,
+          expand: false,
+          builder: (_, ctrl) => Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+                child: Row(
+                  children: [
+                    Text('LISTA DE LA COMPRA',
+                        style: AppTheme.orbitron(size: 14)),
+                    const Spacer(),
+                    Text(
+                      '${checked.length}/${items.length} pedidos',
+                      style: const TextStyle(
+                          color: AppTheme.textSecondary, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(color: AppTheme.dividerColor),
+              if (items.isEmpty)
+                const Expanded(
+                  child: EmptyState(
+                    icon: Icons.shopping_cart_outlined,
+                    message: 'No hay artículos con stock bajo',
+                  ),
+                )
+              else
+                Expanded(
+                  child: ListView.separated(
+                    controller: ctrl,
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
+                    itemCount: items.length,
+                    separatorBuilder: (_, __) =>
+                        const SizedBox(height: 8),
+                    itemBuilder: (_, i) {
+                      final item = items[i];
+                      final isChecked = checked.contains(item.id);
+                      final color = item.status == InventoryStatus.sinStock
+                          ? AppTheme.errorColor
+                          : AppTheme.warningColor;
+                      return GestureDetector(
+                        onTap: () => setSheetState(() {
+                          if (isChecked) {
+                            checked.remove(item.id);
+                          } else {
+                            checked.add(item.id);
+                          }
+                        }),
+                        child: Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: isChecked
+                                ? AppTheme.successColor.withOpacity(0.07)
+                                : AppTheme.panel,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: isChecked
+                                  ? AppTheme.successColor.withOpacity(0.3)
+                                  : color.withOpacity(0.4),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                isChecked
+                                    ? Icons.check_circle
+                                    : Icons.circle_outlined,
+                                color: isChecked
+                                    ? AppTheme.successColor
+                                    : color,
+                                size: 22,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      item.name,
+                                      style: TextStyle(
+                                        color: isChecked
+                                            ? AppTheme.textSecondary
+                                            : AppTheme.textPrimary,
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 14,
+                                        decoration: isChecked
+                                            ? TextDecoration.lineThrough
+                                            : null,
+                                      ),
+                                    ),
+                                    Text(
+                                      '${item.category}${item.location != null ? " · ${item.location}" : ""}',
+                                      style: const TextStyle(
+                                          color: AppTheme.textSecondary,
+                                          fontSize: 11),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  InventoryBadge(item.status),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '${item.quantity.toStringAsFixed(0)} / mín ${item.minLevel.toStringAsFixed(0)} ${item.unit}',
+                                    style: const TextStyle(
+                                        color: AppTheme.textSecondary,
+                                        fontSize: 10),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+            ],
+          ),
+        ),
       ),
     );
   }

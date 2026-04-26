@@ -207,13 +207,13 @@ class _CrewScreenState extends State<CrewScreen> {
                 controller: pinCtrl,
                 style: const TextStyle(color: AppTheme.textPrimary),
                 decoration: const InputDecoration(
-                  labelText: 'PIN de acceso (mín. 4 dígitos) *',
+                  labelText: 'PIN de acceso (4 dígitos) *',
                   prefixIcon: Icon(Icons.lock_outline,
                       color: AppTheme.textSecondary),
                 ),
                 keyboardType: TextInputType.number,
                 obscureText: true,
-                maxLength: 6,
+                maxLength: 4,
               ),
               const SizedBox(height: 8),
 
@@ -295,11 +295,11 @@ class _CrewScreenState extends State<CrewScreen> {
                 child: ElevatedButton(
                   onPressed: () async {
                     if (nameCtrl.text.trim().isEmpty) return;
-                    if (pinCtrl.text.trim().length < 4) {
+                    if (pinCtrl.text.trim().length != 4) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
                           content: Text(
-                              'El PIN debe tener al menos 4 dígitos'),
+                              'El PIN debe tener exactamente 4 dígitos'),
                           backgroundColor: AppTheme.warningColor,
                         ),
                       );
@@ -356,9 +356,87 @@ class _CrewScreenState extends State<CrewScreen> {
     );
   }
 
+  void _showResetPinDialog(
+      BuildContext context, CrewMember member, AppProvider p) {
+    final pinCtrl = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: Text('Resetear PIN de ${member.name}',
+              style: AppTheme.orbitron(size: 13)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Define un PIN temporal de 4 dígitos. El tripulante deberá cambiarlo en su próximo acceso.',
+                style: TextStyle(
+                    color: AppTheme.textSecondary, fontSize: 12),
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: pinCtrl,
+                style: const TextStyle(color: AppTheme.textPrimary),
+                decoration: const InputDecoration(
+                  labelText: 'Nuevo PIN temporal (4 dígitos)',
+                  prefixIcon: Icon(Icons.lock_reset,
+                      color: AppTheme.textSecondary),
+                ),
+                keyboardType: TextInputType.number,
+                obscureText: true,
+                maxLength: 4,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancelar'),
+            ),
+            TextButton(
+              onPressed: () async {
+                final pin = pinCtrl.text.trim();
+                if (pin.length != 4) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('El PIN debe tener exactamente 4 dígitos'),
+                      backgroundColor: AppTheme.warningColor,
+                    ),
+                  );
+                  return;
+                }
+                await p.resetCrewPinByAdmin(member.id, pin);
+                if (ctx.mounted) Navigator.pop(ctx);
+                if (context.mounted) {
+                  Navigator.pop(context); // close member detail
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                          'PIN reseteado para ${member.name}. Se pedirá cambio en el próximo acceso.'),
+                      backgroundColor: AppTheme.successColor,
+                    ),
+                  );
+                }
+              },
+              style: TextButton.styleFrom(
+                  foregroundColor: AppTheme.warningColor),
+              child: const Text('Resetear PIN'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _showMemberDetail(
       BuildContext context, CrewMember member, AppProvider p) {
     final tasks = p.getTasksForCrew(member.id);
+    final memberCerts = p.certificates
+        .where((c) => c.crewMemberId == member.id)
+        .toList()
+      ..sort((a, b) => a.daysUntilExpiry.compareTo(b.daysUntilExpiry));
     final userAccount =
         p.users.where((u) => u.id == member.id).firstOrNull;
 
@@ -366,36 +444,34 @@ class _CrewScreenState extends State<CrewScreen> {
       context: context,
       isScrollControlled: true,
       builder: (_) => DraggableScrollableSheet(
-        initialChildSize: 0.6,
+        initialChildSize: 0.65,
         minChildSize: 0.4,
-        maxChildSize: 0.9,
+        maxChildSize: 0.92,
         expand: false,
-        builder: (_, ctrl) => Padding(
+        builder: (_, ctrl) => ListView(
+          controller: ctrl,
           padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  _CrewAvatar(member: member, radius: 24),
-                  const SizedBox(width: 12),
-                  Column(
+          children: [
+            // Header
+            Row(
+              children: [
+                _CrewAvatar(member: member, radius: 24),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(member.name,
-                          style: AppTheme.orbitron(size: 13)),
+                      Text(member.name, style: AppTheme.orbitron(size: 13)),
                       Text(member.role,
                           style: const TextStyle(
-                              color: AppTheme.textSecondary,
-                              fontSize: 12)),
+                              color: AppTheme.textSecondary, fontSize: 12)),
                       if (member.department != null)
                         Container(
                           margin: const EdgeInsets.only(top: 4),
                           padding: const EdgeInsets.symmetric(
                               horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
-                            color: AppTheme.accent
-                                .withValues(alpha: 0.15),
+                            color: AppTheme.accent.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(member.department!,
@@ -406,79 +482,136 @@ class _CrewScreenState extends State<CrewScreen> {
                         ),
                     ],
                   ),
-                  const Spacer(),
-                  if (userAccount != null)
-                    _AccountStatusBadge(userAccount.accountStatus),
+                ),
+                if (userAccount != null)
+                  _AccountStatusBadge(userAccount.accountStatus),
+              ],
+            ),
+            if (userAccount?.accountExpiresAt != null) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  const Icon(Icons.event_outlined,
+                      color: AppTheme.textSecondary, size: 14),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Expira: ${DateFormat('dd/MM/yyyy').format(userAccount!.accountExpiresAt!)}',
+                    style: TextStyle(
+                      color: userAccount.accountExpiresAt!
+                              .isBefore(DateTime.now())
+                          ? AppTheme.errorColor
+                          : AppTheme.textSecondary,
+                      fontSize: 11,
+                    ),
+                  ),
                 ],
               ),
-              if (userAccount?.accountExpiresAt != null) ...[
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    const Icon(Icons.event_outlined,
-                        color: AppTheme.textSecondary, size: 14),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Expira: ${DateFormat('dd/MM/yyyy').format(userAccount!.accountExpiresAt!)}',
-                      style: TextStyle(
-                        color:
-                            userAccount.accountExpiresAt!
-                                    .isBefore(DateTime.now())
-                                ? AppTheme.errorColor
-                                : AppTheme.textSecondary,
-                        fontSize: 11,
-                      ),
+            ],
+            const SizedBox(height: 16),
+            OutlinedButton.icon(
+              onPressed: () => _showResetPinDialog(context, member, p),
+              icon: const Icon(Icons.lock_reset, size: 16),
+              label: const Text('Resetear PIN'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppTheme.warningColor,
+                side: const BorderSide(color: AppTheme.warningColor),
+                minimumSize: const Size(double.infinity, 40),
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Tasks section
+            Text('TAREAS ACTIVAS (${tasks.length})',
+                style: AppTheme.orbitron(
+                    size: 11, color: AppTheme.textSecondary)),
+            const SizedBox(height: 10),
+            if (tasks.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 12),
+                child: Text('Sin tareas activas',
+                    style: TextStyle(color: AppTheme.textSecondary)),
+              )
+            else
+              ...tasks.map((t) => Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppTheme.background,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: AppTheme.dividerColor),
                     ),
-                  ],
-                ),
-              ],
-              const SizedBox(height: 16),
-              Text('TAREAS ACTIVAS (${tasks.length})',
-                  style: AppTheme.orbitron(
-                      size: 11, color: AppTheme.textSecondary)),
-              const SizedBox(height: 10),
-              if (tasks.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Text('Sin tareas activas',
-                      style: TextStyle(
-                          color: AppTheme.textSecondary)),
-                )
-              else
-                Expanded(
-                  child: ListView.separated(
-                    controller: ctrl,
-                    itemCount: tasks.length,
-                    separatorBuilder: (_, __) =>
-                        const SizedBox(height: 8),
-                    itemBuilder: (_, i) {
-                      final t = tasks[i];
-                      return Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: AppTheme.background,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                              color: AppTheme.dividerColor),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(t.title,
+                              style: const TextStyle(
+                                  color: AppTheme.textPrimary, fontSize: 13)),
                         ),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Text(t.title,
+                        const SizedBox(width: 8),
+                        PriorityBadge(t.priority),
+                      ],
+                    ),
+                  )),
+
+            // Certificates section
+            if (memberCerts.isNotEmpty) ...[
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Text('CERTIFICADOS (${memberCerts.length})',
+                      style: AppTheme.orbitron(
+                          size: 11, color: AppTheme.textSecondary)),
+                  const Spacer(),
+                  if (memberCerts.any((c) => c.alertLevel != AlertLevel.none))
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: AppTheme.warningColor),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              ...memberCerts.map((cert) => Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppTheme.background,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: AppTheme.dividerColor),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.verified_outlined,
+                            color: AppTheme.accent, size: 16),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(cert.name,
                                   style: const TextStyle(
                                       color: AppTheme.textPrimary,
-                                      fontSize: 13)),
-                            ),
-                            const SizedBox(width: 8),
-                            PriorityBadge(t.priority),
-                          ],
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w500)),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Vence: ${formatDate(cert.expiryDate)}',
+                                style: const TextStyle(
+                                    color: AppTheme.textSecondary,
+                                    fontSize: 11),
+                              ),
+                            ],
+                          ),
                         ),
-                      );
-                    },
-                  ),
-                ),
+                        AlertBadge(cert.alertLevel, cert.daysUntilExpiry),
+                      ],
+                    ),
+                  )),
             ],
-          ),
+            const SizedBox(height: 20),
+          ],
         ),
       ),
     );
