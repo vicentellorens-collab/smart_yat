@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/models.dart';
 import '../services/storage_service.dart';
 import '../services/auth_service.dart';
+import '../services/secure_auth_storage.dart';
 import '../services/connectivity_service.dart';
 import '../services/supabase_service.dart';
 
@@ -428,11 +430,25 @@ class AppProvider extends ChangeNotifier {
   void login(AppUser user) {
     _currentUser = user;
     notifyListeners();
+    unawaited(_signInSupabaseAuth(user.id));
+  }
+
+  Future<void> _signInSupabaseAuth(String userId) async {
+    try {
+      final creds = await SecureAuthStorage.readCredentials(userId);
+      if (creds != null) {
+        await Supabase.instance.client.auth.signInWithPassword(
+          email: creds['email']!,
+          password: creds['password']!,
+        );
+      }
+    } catch (_) {}
   }
 
   void logout() {
     _currentUser = null;
     notifyListeners();
+    Supabase.instance.client.auth.signOut().ignore();
   }
 
   Future<String?> registerAdmin({
@@ -441,19 +457,37 @@ class AppProvider extends ChangeNotifier {
     required String yachtName,
     String? email,
   }) async {
+    // Si no hay email real, generamos uno interno para Supabase Auth
+    final authEmail = (email != null && email.isNotEmpty)
+        ? email
+        : 'admin-${DateTime.now().millisecondsSinceEpoch}@smartcrew.internal';
+    final authPassword = AuthService.generateSecurePassword();
+
+    // Intentar crear cuenta en Supabase Auth; si falla, seguimos con ID local
+    String userId = DateTime.now().millisecondsSinceEpoch.toString();
+    try {
+      final authResponse = await Supabase.instance.client.auth.signUp(
+        email: authEmail,
+        password: authPassword,
+      );
+      if (authResponse.user != null) {
+        userId = authResponse.user!.id;
+        await SecureAuthStorage.saveCredentials(userId, authEmail, authPassword);
+      }
+    } catch (_) {}
+
     final hashedPin = AuthService.hashPin(pin);
-    final id = DateTime.now().millisecondsSinceEpoch.toString();
-    final yachtId = 'y_$id';
+    final yachtId = 'y_$userId';
 
     final yachtCfg = YachtConfig(
       id: yachtId,
       name: yachtName,
-      adminId: id,
+      adminId: userId,
       createdAt: DateTime.now(),
     );
 
     final admin = AppUser(
-      id: id,
+      id: userId,
       name: name,
       role: UserRole.gestor,
       pin: hashedPin,
@@ -468,7 +502,6 @@ class AppProvider extends ChangeNotifier {
     _yachtConfig = yachtCfg;
     await _storage.saveUsers(_users);
     await _storage.saveYachtConfig(yachtCfg);
-    // Sync cloud
     unawaited(_cloud.upsertYacht(yachtCfg));
     unawaited(_cloud.upsertUser(admin));
     notifyListeners();
@@ -496,11 +529,29 @@ class AppProvider extends ChangeNotifier {
     String? department,
     String? photoPath,
   }) async {
-    final id = DateTime.now().millisecondsSinceEpoch.toString();
+    // Email interno para Supabase Auth — el tripulante nunca lo ve
+    final internalEmail =
+        'crew-${DateTime.now().millisecondsSinceEpoch}@smartcrew.internal';
+    final authPassword = AuthService.generateSecurePassword();
+
+    // Intentar crear cuenta en Supabase Auth; si falla, seguimos con ID local
+    String userId = DateTime.now().millisecondsSinceEpoch.toString();
+    try {
+      final authResponse = await Supabase.instance.client.auth.signUp(
+        email: internalEmail,
+        password: authPassword,
+      );
+      if (authResponse.user != null) {
+        userId = authResponse.user!.id;
+        await SecureAuthStorage.saveCredentials(
+            userId, internalEmail, authPassword);
+      }
+    } catch (_) {}
+
     final hashedPin = AuthService.hashPin(pin);
 
     final user = AppUser(
-      id: id,
+      id: userId,
       name: name,
       role: UserRole.tripulante,
       pin: hashedPin,
@@ -514,7 +565,7 @@ class AppProvider extends ChangeNotifier {
     );
 
     final member = CrewMember(
-      id: id,
+      id: userId,
       name: name,
       role: role,
       notes: notes,
@@ -526,7 +577,6 @@ class AppProvider extends ChangeNotifier {
     _crew.add(member);
     await _storage.saveUsers(_users);
     await _storage.saveCrew(_crew);
-    // Sync cloud
     unawaited(_cloud.upsertUser(user));
     if (_yachtConfig != null) {
       unawaited(_cloud.upsertCrew(member, _yachtConfig!.id));

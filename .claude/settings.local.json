@@ -4,7 +4,9 @@
       "Bash(flutter devices:*)",
       "Bash(flutter analyze:*)",
       "Bash(flutter build:*)",
-      "Bash(winget upgrade:*)"
+      "Bash(winget upgrade:*)",
+      "Bash(flutter pub *)",
+      "Bash(git add *)"
     ]
   }
 }
