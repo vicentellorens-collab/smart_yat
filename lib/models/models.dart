@@ -242,6 +242,7 @@ class Certificate {
   String certCategory; // 'barco' or 'tripulante'
   String? crewMemberId;
   String? crewMemberName;
+  String? attachmentPath;
 
   Certificate({
     required this.id,
@@ -253,6 +254,7 @@ class Certificate {
     this.certCategory = 'barco',
     this.crewMemberId,
     this.crewMemberName,
+    this.attachmentPath,
   });
 
   int get daysUntilExpiry =>
@@ -278,6 +280,7 @@ class Certificate {
         'certCategory': certCategory,
         'crewMemberId': crewMemberId,
         'crewMemberName': crewMemberName,
+        'attachmentPath': attachmentPath,
       };
 
   factory Certificate.fromJson(Map<String, dynamic> json) => Certificate(
@@ -290,6 +293,7 @@ class Certificate {
         certCategory: json['certCategory'] ?? 'barco',
         crewMemberId: json['crewMemberId'],
         crewMemberName: json['crewMemberName'],
+        attachmentPath: json['attachmentPath'],
       );
 }
 

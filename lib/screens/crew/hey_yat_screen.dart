@@ -199,10 +199,24 @@ class _HeyYatScreenState extends State<HeyYatScreen>
     _spinCtrl.repeat();
 
     try {
+      final provider = context.read<AppProvider>();
       final inventoryItems =
-          context.read<AppProvider>().inventory.map((i) => i.name).toList();
-      final result =
+          provider.inventory.map((i) => i.name).toList();
+      final rawResult =
           await _ai.classify(text, inventoryItems: inventoryItems);
+
+      // BUG-007: For CONSULTA_INVENTARIO, build the actual shopping list
+      AiClassificationResult result = rawResult;
+      if (rawResult.categoria == 'CONSULTA_INVENTARIO') {
+        final shoppingList = provider.getShoppingListResponse();
+        result = AiClassificationResult(
+          categoria: rawResult.categoria,
+          prioridad: rawResult.prioridad,
+          datosExtraidos: {'lista_compra': shoppingList},
+          respuestaUsuario: shoppingList,
+        );
+      }
+
       if (mounted) {
         setState(() {
           _result = result;

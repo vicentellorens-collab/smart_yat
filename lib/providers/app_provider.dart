@@ -774,6 +774,72 @@ class AppProvider extends ChangeNotifier {
     _crew.removeWhere((c) => c.id == id);
     await _storage.saveCrew(_crew);
     unawaited(_cloud.deleteCrew(id));
+    // BUG-008: Deactivate (not delete) the user account
+    final idx = _users.indexWhere((u) => u.id == id);
+    if (idx != -1) {
+      final u = _users[idx];
+      _users[idx] = AppUser(
+        id: u.id,
+        name: u.name,
+        role: u.role,
+        pin: u.pin,
+        isAdmin: u.isAdmin,
+        yachtId: u.yachtId,
+        yachtName: u.yachtName,
+        accountExpiresAt: u.accountExpiresAt,
+        accountStatus: AccountStatus.blocked,
+        mustChangePIN: u.mustChangePIN,
+        email: u.email,
+      );
+      await _storage.saveUsers(_users);
+      unawaited(_cloud.upsertUser(_users[idx]));
+    }
+    notifyListeners();
+  }
+
+  // BUG-009: Update crew member data
+  Future<void> updateCrewMember({
+    required String memberId,
+    required String name,
+    required String role,
+    String? department,
+    String? photoPath,
+    DateTime? accountExpiresAt,
+  }) async {
+    final crewIdx = _crew.indexWhere((c) => c.id == memberId);
+    if (crewIdx != -1) {
+      _crew[crewIdx] = CrewMember(
+        id: memberId,
+        name: name,
+        role: role,
+        notes: _crew[crewIdx].notes,
+        department: department,
+        photoPath: photoPath,
+      );
+      await _storage.saveCrew(_crew);
+      if (_yachtConfig != null) {
+        unawaited(_cloud.upsertCrew(_crew[crewIdx], _yachtConfig!.id));
+      }
+    }
+    final userIdx = _users.indexWhere((u) => u.id == memberId);
+    if (userIdx != -1) {
+      final u = _users[userIdx];
+      _users[userIdx] = AppUser(
+        id: u.id,
+        name: name,
+        role: u.role,
+        pin: u.pin,
+        isAdmin: u.isAdmin,
+        yachtId: u.yachtId,
+        yachtName: u.yachtName,
+        accountExpiresAt: accountExpiresAt,
+        accountStatus: u.accountStatus,
+        mustChangePIN: u.mustChangePIN,
+        email: u.email,
+      );
+      await _storage.saveUsers(_users);
+      unawaited(_cloud.upsertUser(_users[userIdx]));
+    }
     notifyListeners();
   }
 
@@ -916,13 +982,40 @@ class AppProvider extends ChangeNotifier {
         ));
         break;
       case 'INVENTARIO':
-        final producto = _str(result.datosExtraidos['producto']) ?? '';
-        final match = _inventory.where((i) =>
-            i.name.toLowerCase().contains(producto.toLowerCase())).firstOrNull;
-        if (match != null) {
-          match.quantity = 0;
+        // BUG-006: Apply quantity action (restar/sumar/alerta) correctly
+        final producto = _str(result.datosExtraidos['item_name']) ??
+            _str(result.datosExtraidos['producto']) ?? '';
+        final accion = _str(result.datosExtraidos['action']) ??
+            _str(result.datosExtraidos['accion']) ?? 'alerta';
+        final rawQty = result.datosExtraidos['quantity'] ??
+            result.datosExtraidos['cantidad'];
+        final cantidad = rawQty != null
+            ? (rawQty is num ? rawQty.toDouble() : double.tryParse('$rawQty') ?? 0.0)
+            : 0.0;
+
+        final matchedId = _str(result.datosExtraidos['matched_inventory_id']);
+        InventoryItem? match;
+        if (matchedId != null) {
+          match = _inventory.where((i) => i.id == matchedId).firstOrNull;
+        }
+        match ??= _inventory
+            .where((i) =>
+                i.name.toLowerCase().contains(producto.toLowerCase()) &&
+                producto.isNotEmpty)
+            .firstOrNull;
+
+        if (match != null && accion != 'alerta') {
+          if (accion == 'restar') {
+            match.quantity =
+                (match.quantity - cantidad).clamp(0.0, double.infinity);
+          } else if (accion == 'sumar') {
+            match.quantity = match.quantity + cantidad;
+          }
           await updateInventoryItem(match);
         }
+        break;
+      case 'CONSULTA_INVENTARIO':
+        // BUG-007: Just record the voice command; actual response is built by getShoppingListResponse()
         break;
       case 'EVENTO':
         await addTask(Task(
@@ -943,6 +1036,23 @@ class AppProvider extends ChangeNotifier {
         ));
         break;
     }
+  }
+
+  // BUG-007: Generate shopping list from low-stock items
+  String getShoppingListResponse() {
+    final lowStock = _inventory
+        .where((i) => i.status != InventoryStatus.ok)
+        .toList();
+    if (lowStock.isEmpty) {
+      return 'El inventario está completo. No hay artículos por comprar.';
+    }
+    final items = lowStock.map((i) {
+      if (i.status == InventoryStatus.sinStock) {
+        return '${i.name} (agotado)';
+      }
+      return '${i.name} (quedan ${i.quantity} ${i.unit}, mínimo ${i.minLevel})';
+    }).join(', ');
+    return 'Necesitas comprar: $items';
   }
 
   // ==================== PENDING VOICE MESSAGES ====================

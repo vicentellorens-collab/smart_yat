@@ -8,13 +8,31 @@ import '../../models/models.dart';
 import '../../providers/app_provider.dart';
 import '../../widgets/common_widgets.dart';
 
+// BUG-003: Exactly 4 departments
 const _kDepartments = [
   'Deck',
-  'Ingeniería',
-  'Mantenimiento',
   'Interior',
-  'Cocina',
-  'Otro',
+  'Cook',
+  'Engine',
+];
+
+// BUG-004: Predefined roles
+const _kCrewRoles = [
+  'Chief/First Officer',
+  'Second Officer',
+  'Third Officer',
+  'Bosun',
+  'Deckhand',
+  'Chase Boat Captain',
+  'Tender Driver',
+  'Chief Engineer',
+  'Second Engineer',
+  'Third Engineer',
+  'ETO',
+  'Chief Stew',
+  'Stew',
+  'Chef',
+  'Mate',
 ];
 
 class CrewScreen extends StatefulWidget {
@@ -45,7 +63,6 @@ class _CrewScreenState extends State<CrewScreen> {
       ),
       body: Column(
         children: [
-          // Department filter chips
           SizedBox(
             height: 52,
             child: ListView(
@@ -104,6 +121,103 @@ class _CrewScreenState extends State<CrewScreen> {
     );
   }
 
+  // BUG-004: Role combo box helper widget
+  Widget _buildRoleField(
+    TextEditingController roleCtrl,
+    void Function(VoidCallback) setModalState,
+    bool showSuggestions,
+    void Function(bool) setSuggestions,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextField(
+          controller: roleCtrl,
+          style: const TextStyle(color: AppTheme.textPrimary),
+          decoration: InputDecoration(
+            labelText: 'Cargo',
+            hintText: 'Buscar o escribir cargo...',
+            hintStyle: const TextStyle(color: AppTheme.textSecondary),
+            suffixIcon: Icon(
+              showSuggestions ? Icons.arrow_drop_up : Icons.arrow_drop_down,
+              color: AppTheme.textSecondary,
+            ),
+          ),
+          textCapitalization: TextCapitalization.sentences,
+          onTap: () => setModalState(() => setSuggestions(true)),
+          onChanged: (v) => setModalState(() => setSuggestions(true)),
+        ),
+        if (showSuggestions) ...[
+          const SizedBox(height: 2),
+          Container(
+            constraints: const BoxConstraints(maxHeight: 180),
+            decoration: BoxDecoration(
+              color: AppTheme.panel,
+              border:
+                  Border.all(color: AppTheme.accent.withValues(alpha: 0.4)),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                GestureDetector(
+                  onTap: () =>
+                      setModalState(() => setSuggestions(false)),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      border: Border(
+                          bottom:
+                              BorderSide(color: AppTheme.dividerColor)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.close,
+                            size: 14,
+                            color: AppTheme.textSecondary),
+                        const SizedBox(width: 6),
+                        const Text('Cerrar',
+                            style: TextStyle(
+                                color: AppTheme.textSecondary,
+                                fontSize: 11)),
+                      ],
+                    ),
+                  ),
+                ),
+                Flexible(
+                  child: ListView(
+                    shrinkWrap: true,
+                    children: _kCrewRoles
+                        .where((r) =>
+                            roleCtrl.text.isEmpty ||
+                            r.toLowerCase().contains(
+                                roleCtrl.text.toLowerCase()))
+                        .map((r) => InkWell(
+                              onTap: () {
+                                roleCtrl.text = r;
+                                setModalState(() => setSuggestions(false));
+                              },
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 10),
+                                child: Text(r,
+                                    style: const TextStyle(
+                                        color: AppTheme.textPrimary,
+                                        fontSize: 13)),
+                              ),
+                            ))
+                        .toList(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
   void _showAddDialog(BuildContext context) {
     final nameCtrl = TextEditingController();
     final roleCtrl = TextEditingController();
@@ -111,6 +225,7 @@ class _CrewScreenState extends State<CrewScreen> {
     DateTime? expiresAt;
     String? selectedDept;
     XFile? photoFile;
+    bool showRoleSugg = false;
     final picker = ImagePicker();
 
     showModalBottomSheet(
@@ -128,12 +243,10 @@ class _CrewScreenState extends State<CrewScreen> {
                   style: AppTheme.orbitron(size: 14)),
               const SizedBox(height: 16),
 
-              // Photo picker
               Center(
                 child: GestureDetector(
                   onTap: () async {
-                    final source =
-                        await _pickImageSource(ctx);
+                    final source = await _pickImageSource(ctx);
                     if (source == null) return;
                     final file = await picker.pickImage(
                         source: source, imageQuality: 70);
@@ -153,11 +266,10 @@ class _CrewScreenState extends State<CrewScreen> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               const Icon(Icons.add_a_photo,
-                                  color: AppTheme.accent,
-                                  size: 22),
+                                  color: AppTheme.accent, size: 22),
                               const SizedBox(height: 2),
-                              Text('Foto',
-                                  style: const TextStyle(
+                              const Text('Foto',
+                                  style: TextStyle(
                                       color: AppTheme.accent,
                                       fontSize: 10)),
                             ],
@@ -176,16 +288,16 @@ class _CrewScreenState extends State<CrewScreen> {
                 textCapitalization: TextCapitalization.words,
               ),
               const SizedBox(height: 12),
-              TextField(
-                controller: roleCtrl,
-                style: const TextStyle(color: AppTheme.textPrimary),
-                decoration: const InputDecoration(
-                    labelText: 'Cargo (ej: Marinero, Cocinero...)'),
-                textCapitalization: TextCapitalization.sentences,
+
+              // BUG-004: Role combo box
+              _buildRoleField(
+                roleCtrl,
+                setModalState,
+                showRoleSugg,
+                (v) => showRoleSugg = v,
               ),
               const SizedBox(height: 12),
 
-              // Department dropdown
               DropdownButtonFormField<String>(
                 value: selectedDept,
                 dropdownColor: AppTheme.panel,
@@ -217,7 +329,6 @@ class _CrewScreenState extends State<CrewScreen> {
               ),
               const SizedBox(height: 8),
 
-              // Expiry date
               GestureDetector(
                 onTap: () async {
                   final picked = await showDatePicker(
@@ -281,8 +392,7 @@ class _CrewScreenState extends State<CrewScreen> {
                           onTap: () =>
                               setModalState(() => expiresAt = null),
                           child: const Icon(Icons.clear,
-                              color: AppTheme.textSecondary,
-                              size: 16),
+                              color: AppTheme.textSecondary, size: 16),
                         ),
                     ],
                   ),
@@ -410,7 +520,7 @@ class _CrewScreenState extends State<CrewScreen> {
                 await p.resetCrewPinByAdmin(member.id, pin);
                 if (ctx.mounted) Navigator.pop(ctx);
                 if (context.mounted) {
-                  Navigator.pop(context); // close member detail
+                  Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(
@@ -425,6 +535,214 @@ class _CrewScreenState extends State<CrewScreen> {
               child: const Text('Resetear PIN'),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  // BUG-009: Edit crew member dialog
+  void _showEditDialog(
+      BuildContext context, CrewMember member, AppProvider p) {
+    final nameCtrl = TextEditingController(text: member.name);
+    final roleCtrl = TextEditingController(text: member.role);
+    String? selectedDept = member.department;
+    XFile? photoFile;
+    bool showRoleSugg = false;
+    final picker = ImagePicker();
+
+    final userAccount =
+        p.users.where((u) => u.id == member.id).firstOrNull;
+    DateTime? expiresAt = userAccount?.accountExpiresAt;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) => SingleChildScrollView(
+          padding: EdgeInsets.fromLTRB(
+              20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('EDITAR TRIPULANTE',
+                  style: AppTheme.orbitron(size: 14)),
+              const SizedBox(height: 16),
+
+              // Photo
+              Center(
+                child: GestureDetector(
+                  onTap: () async {
+                    final source = await _pickImageSource(ctx);
+                    if (source == null) return;
+                    final file = await picker.pickImage(
+                        source: source, imageQuality: 70);
+                    if (file != null) {
+                      setModalState(() => photoFile = file);
+                    }
+                  },
+                  child: CircleAvatar(
+                    radius: 36,
+                    backgroundColor:
+                        AppTheme.accent.withValues(alpha: 0.15),
+                    backgroundImage: photoFile != null
+                        ? FileImage(File(photoFile!.path))
+                        : (member.photoPath != null &&
+                                File(member.photoPath!).existsSync())
+                            ? FileImage(File(member.photoPath!))
+                            : null,
+                    child: (photoFile == null &&
+                            (member.photoPath == null ||
+                                !File(member.photoPath!).existsSync()))
+                        ? Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.edit,
+                                  color: AppTheme.accent, size: 22),
+                              const SizedBox(height: 2),
+                              const Text('Cambiar',
+                                  style: TextStyle(
+                                      color: AppTheme.accent,
+                                      fontSize: 10)),
+                            ],
+                          )
+                        : null,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              TextField(
+                controller: nameCtrl,
+                style: const TextStyle(color: AppTheme.textPrimary),
+                decoration: const InputDecoration(
+                    labelText: 'Nombre completo *'),
+                textCapitalization: TextCapitalization.words,
+              ),
+              const SizedBox(height: 12),
+
+              _buildRoleField(
+                roleCtrl,
+                setModalState,
+                showRoleSugg,
+                (v) => showRoleSugg = v,
+              ),
+              const SizedBox(height: 12),
+
+              DropdownButtonFormField<String>(
+                value: selectedDept,
+                dropdownColor: AppTheme.panel,
+                style: const TextStyle(color: AppTheme.textPrimary),
+                decoration:
+                    const InputDecoration(labelText: 'Departamento'),
+                items: _kDepartments
+                    .map((d) => DropdownMenuItem(
+                          value: d,
+                          child: Text(d),
+                        ))
+                    .toList(),
+                onChanged: (v) =>
+                    setModalState(() => selectedDept = v),
+              ),
+              const SizedBox(height: 12),
+
+              GestureDetector(
+                onTap: () async {
+                  final picked = await showDatePicker(
+                    context: ctx,
+                    initialDate: expiresAt ??
+                        DateTime.now().add(const Duration(days: 365)),
+                    firstDate: DateTime.now()
+                        .subtract(const Duration(days: 1)),
+                    lastDate: DateTime(2100),
+                    builder: (c, child) => Theme(
+                      data: Theme.of(c).copyWith(
+                        colorScheme: const ColorScheme.dark(
+                          primary: AppTheme.accent,
+                          surface: AppTheme.panel,
+                        ),
+                      ),
+                      child: child!,
+                    ),
+                  );
+                  if (picked != null) {
+                    setModalState(() => expiresAt = picked);
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 14),
+                  decoration: BoxDecoration(
+                    color: AppTheme.background,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppTheme.dividerColor),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.event_outlined,
+                          color: AppTheme.textSecondary, size: 18),
+                      const SizedBox(width: 10),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Cuenta expira en (opcional)',
+                              style: TextStyle(
+                                  color: AppTheme.textSecondary,
+                                  fontSize: 11)),
+                          const SizedBox(height: 2),
+                          Text(
+                            expiresAt != null
+                                ? DateFormat('dd/MM/yyyy')
+                                    .format(expiresAt!)
+                                : 'Sin fecha de caducidad',
+                            style: TextStyle(
+                              color: expiresAt != null
+                                  ? AppTheme.textPrimary
+                                  : AppTheme.textSecondary,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const Spacer(),
+                      if (expiresAt != null)
+                        GestureDetector(
+                          onTap: () =>
+                              setModalState(() => expiresAt = null),
+                          child: const Icon(Icons.clear,
+                              color: AppTheme.textSecondary, size: 16),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () async {
+                    if (nameCtrl.text.trim().isEmpty) return;
+                    await p.updateCrewMember(
+                      memberId: member.id,
+                      name: nameCtrl.text.trim(),
+                      role: roleCtrl.text.trim().isEmpty
+                          ? member.role
+                          : roleCtrl.text.trim(),
+                      department: selectedDept,
+                      photoPath: photoFile?.path ?? member.photoPath,
+                      accountExpiresAt: expiresAt,
+                    );
+                    if (ctx.mounted) {
+                      Navigator.pop(ctx); // close edit dialog
+                      Navigator.pop(context); // close detail sheet
+                    }
+                  },
+                  child: const Text('GUARDAR CAMBIOS'),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -452,7 +770,6 @@ class _CrewScreenState extends State<CrewScreen> {
           controller: ctrl,
           padding: const EdgeInsets.all(20),
           children: [
-            // Header
             Row(
               children: [
                 _CrewAvatar(member: member, radius: 24),
@@ -461,17 +778,20 @@ class _CrewScreenState extends State<CrewScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(member.name, style: AppTheme.orbitron(size: 13)),
+                      Text(member.name,
+                          style: AppTheme.orbitron(size: 13)),
                       Text(member.role,
                           style: const TextStyle(
-                              color: AppTheme.textSecondary, fontSize: 12)),
+                              color: AppTheme.textSecondary,
+                              fontSize: 12)),
                       if (member.department != null)
                         Container(
                           margin: const EdgeInsets.only(top: 4),
                           padding: const EdgeInsets.symmetric(
                               horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
-                            color: AppTheme.accent.withValues(alpha: 0.15),
+                            color:
+                                AppTheme.accent.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(member.department!,
@@ -508,8 +828,26 @@ class _CrewScreenState extends State<CrewScreen> {
               ),
             ],
             const SizedBox(height: 16),
+
+            // BUG-009: Edit button
             OutlinedButton.icon(
-              onPressed: () => _showResetPinDialog(context, member, p),
+              onPressed: () {
+                Navigator.pop(context);
+                _showEditDialog(context, member, p);
+              },
+              icon: const Icon(Icons.edit_outlined, size: 16),
+              label: const Text('Editar tripulante'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppTheme.accent,
+                side: const BorderSide(color: AppTheme.accent),
+                minimumSize: const Size(double.infinity, 40),
+              ),
+            ),
+            const SizedBox(height: 8),
+
+            OutlinedButton.icon(
+              onPressed: () =>
+                  _showResetPinDialog(context, member, p),
               icon: const Icon(Icons.lock_reset, size: 16),
               label: const Text('Resetear PIN'),
               style: OutlinedButton.styleFrom(
@@ -518,9 +856,25 @@ class _CrewScreenState extends State<CrewScreen> {
                 minimumSize: const Size(double.infinity, 40),
               ),
             ),
+            const SizedBox(height: 8),
+
+            // BUG-008: Delete button in detail sheet
+            OutlinedButton.icon(
+              onPressed: () {
+                Navigator.pop(context);
+                _confirmDelete(context, member, p);
+              },
+              icon: const Icon(Icons.delete_outline, size: 16),
+              label: const Text('Eliminar tripulante'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppTheme.errorColor,
+                side: const BorderSide(
+                    color: AppTheme.errorColor),
+                minimumSize: const Size(double.infinity, 40),
+              ),
+            ),
             const SizedBox(height: 20),
 
-            // Tasks section
             Text('TAREAS ACTIVAS (${tasks.length})',
                 style: AppTheme.orbitron(
                     size: 11, color: AppTheme.textSecondary)),
@@ -538,14 +892,16 @@ class _CrewScreenState extends State<CrewScreen> {
                     decoration: BoxDecoration(
                       color: AppTheme.background,
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: AppTheme.dividerColor),
+                      border:
+                          Border.all(color: AppTheme.dividerColor),
                     ),
                     child: Row(
                       children: [
                         Expanded(
                           child: Text(t.title,
                               style: const TextStyle(
-                                  color: AppTheme.textPrimary, fontSize: 13)),
+                                  color: AppTheme.textPrimary,
+                                  fontSize: 13)),
                         ),
                         const SizedBox(width: 8),
                         PriorityBadge(t.priority),
@@ -553,16 +909,17 @@ class _CrewScreenState extends State<CrewScreen> {
                     ),
                   )),
 
-            // Certificates section
             if (memberCerts.isNotEmpty) ...[
               const SizedBox(height: 20),
               Row(
                 children: [
                   Text('CERTIFICADOS (${memberCerts.length})',
                       style: AppTheme.orbitron(
-                          size: 11, color: AppTheme.textSecondary)),
+                          size: 11,
+                          color: AppTheme.textSecondary)),
                   const Spacer(),
-                  if (memberCerts.any((c) => c.alertLevel != AlertLevel.none))
+                  if (memberCerts
+                      .any((c) => c.alertLevel != AlertLevel.none))
                     Container(
                       width: 8,
                       height: 8,
@@ -579,7 +936,8 @@ class _CrewScreenState extends State<CrewScreen> {
                     decoration: BoxDecoration(
                       color: AppTheme.background,
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: AppTheme.dividerColor),
+                      border:
+                          Border.all(color: AppTheme.dividerColor),
                     ),
                     child: Row(
                       children: [
@@ -588,13 +946,15 @@ class _CrewScreenState extends State<CrewScreen> {
                         const SizedBox(width: 10),
                         Expanded(
                           child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                            crossAxisAlignment:
+                                CrossAxisAlignment.start,
                             children: [
                               Text(cert.name,
                                   style: const TextStyle(
                                       color: AppTheme.textPrimary,
                                       fontSize: 13,
-                                      fontWeight: FontWeight.w500)),
+                                      fontWeight:
+                                          FontWeight.w500)),
                               const SizedBox(height: 2),
                               Text(
                                 'Vence: ${formatDate(cert.expiryDate)}',
@@ -605,7 +965,8 @@ class _CrewScreenState extends State<CrewScreen> {
                             ],
                           ),
                         ),
-                        AlertBadge(cert.alertLevel, cert.daysUntilExpiry),
+                        AlertBadge(
+                            cert.alertLevel, cert.daysUntilExpiry),
                       ],
                     ),
                   )),
@@ -624,18 +985,19 @@ class _CrewScreenState extends State<CrewScreen> {
       builder: (_) => AlertDialog(
         title: Text('Eliminar tripulante',
             style: AppTheme.orbitron(size: 14)),
-        content: Text('¿Eliminar a ${member.name}?',
-            style:
-                const TextStyle(color: AppTheme.textSecondary)),
+        content: Text(
+          '¿Eliminar a ${member.name}? Esta acción no se puede deshacer.',
+          style: const TextStyle(color: AppTheme.textSecondary),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Cancelar'),
           ),
           TextButton(
-            onPressed: () {
-              p.deleteCrewMember(member.id);
-              Navigator.pop(context);
+            onPressed: () async {
+              await p.deleteCrewMember(member.id);
+              if (context.mounted) Navigator.pop(context);
             },
             style: TextButton.styleFrom(
                 foregroundColor: AppTheme.errorColor),
