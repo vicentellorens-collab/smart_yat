@@ -25,6 +25,52 @@ class _CrewHomeState extends State<CrewHome> {
     );
   }
 
+  void _showUserMenu(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppTheme.panel,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
+                color: AppTheme.dividerColor,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.switch_account, color: AppTheme.accent),
+              title: const Text('Cambiar de usuario',
+                  style: TextStyle(color: AppTheme.textPrimary)),
+              onTap: () {
+                Navigator.pop(context);
+                _changeUser();
+              },
+            ),
+            ListTile(
+              leading:
+                  const Icon(Icons.logout, color: AppTheme.errorColor),
+              title: const Text('Cerrar sesión',
+                  style: TextStyle(color: AppTheme.errorColor)),
+              onTap: () {
+                Navigator.pop(context);
+                _changeUser();
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = context.watch<AppProvider>().currentUser;
@@ -37,95 +83,66 @@ class _CrewHomeState extends State<CrewHome> {
 
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         title: Row(
           children: [
-            Text(user?.name ?? 'Tripulante'),
-            const SizedBox(width: 8),
-            Container(
-              width: 8,
-              height: 8,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: isOnline
-                    ? const Color(0xFF10b981)
-                    : const Color(0xFFef4444),
+            CircleAvatar(
+              radius: 16,
+              backgroundColor: AppTheme.accent.withValues(alpha: 0.2),
+              child: Text(
+                user?.name.isNotEmpty == true ? user!.name[0].toUpperCase() : 'T',
+                style: const TextStyle(
+                    color: AppTheme.accent,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    user?.name ?? 'Tripulante',
+                    style: const TextStyle(
+                        color: AppTheme.textPrimary,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600),
+                  ),
+                  Row(
+                    children: [
+                      Container(
+                        width: 6,
+                        height: 6,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: isOnline
+                              ? const Color(0xFF10b981)
+                              : const Color(0xFFef4444),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        isOnline ? 'En línea' : 'Sin conexión',
+                        style: TextStyle(
+                          color: isOnline
+                              ? const Color(0xFF10b981)
+                              : const Color(0xFFef4444),
+                          fontSize: 10,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
           ],
         ),
-        leading: Builder(
-          builder: (ctx) => IconButton(
-            icon: const Icon(Icons.menu),
-            onPressed: () => Scaffold.of(ctx).openDrawer(),
-          ),
-        ),
-        actions: const [],
-      ),
-      drawer: NavigationDrawer(
-        backgroundColor: AppTheme.panel,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 28, 16, 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 26,
-                      backgroundColor: AppTheme.accent.withValues(alpha: 0.2),
-                      child: Text(
-                        user?.name.isNotEmpty == true ? user!.name[0] : 'T',
-                        style: const TextStyle(
-                            color: AppTheme.accent,
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: isOnline
-                            ? const Color(0xFF10b981)
-                            : const Color(0xFFef4444),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Text(user?.name ?? 'Tripulante',
-                    style: const TextStyle(
-                        color: AppTheme.textPrimary,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600)),
-                const Text('Tripulante',
-                    style:
-                        TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
-              ],
-            ),
-          ),
-          const Divider(color: AppTheme.dividerColor),
-          ListTile(
-            leading:
-                const Icon(Icons.switch_account, color: AppTheme.accent),
-            title: const Text('Cambiar de usuario',
-                style: TextStyle(color: AppTheme.textPrimary)),
-            onTap: () {
-              Navigator.pop(context);
-              _changeUser();
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.logout, color: AppTheme.errorColor),
-            title: const Text('Cerrar Sesión',
-                style: TextStyle(color: AppTheme.errorColor)),
-            onTap: () {
-              Navigator.pop(context);
-              _changeUser();
-            },
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.more_vert),
+            tooltip: 'Opciones',
+            onPressed: () => _showUserMenu(context),
           ),
         ],
       ),
@@ -165,9 +182,9 @@ class _CrewHomeState extends State<CrewHome> {
           NavigationDestination(
             icon: Badge(
               isLabelVisible: context
-                      .watch<AppProvider>()
-                      .getTasksForCrew(user?.id ?? '')
-                      .isNotEmpty,
+                  .watch<AppProvider>()
+                  .getTasksForCrew(user?.id ?? '')
+                  .isNotEmpty,
               label: Text(
                 '${context.watch<AppProvider>().getTasksForCrew(user?.id ?? '').length}',
               ),

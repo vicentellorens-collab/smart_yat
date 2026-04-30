@@ -24,7 +24,6 @@ class ManagerHome extends StatefulWidget {
 class _ManagerHomeState extends State<ManagerHome> {
   int _currentIndex = 0;
 
-  // Navigation state for dashboard → screen
   Key _tasksKey = const Key('tasks-init');
   int _tasksInitialTab = 0;
   Key _inventoryKey = const Key('inventory-init');
@@ -54,6 +53,78 @@ class _ManagerHomeState extends State<ManagerHome> {
     );
   }
 
+  void _openHeyYat() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const _HeyYatPage()),
+    );
+  }
+
+  void _showMoreMenu(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppTheme.panel,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
+                color: AppTheme.dividerColor,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.document_scanner_outlined,
+                  color: AppTheme.accent),
+              title: const Text('Escanear documento',
+                  style: TextStyle(color: AppTheme.textPrimary)),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const DocumentScanScreen()),
+                );
+              },
+            ),
+            const Divider(color: AppTheme.dividerColor, height: 1),
+            ListTile(
+              leading:
+                  const Icon(Icons.switch_account, color: AppTheme.accent),
+              title: const Text('Cambiar de usuario',
+                  style: TextStyle(color: AppTheme.textPrimary)),
+              onTap: () {
+                Navigator.pop(context);
+                _switchProfile();
+              },
+            ),
+            ListTile(
+              leading:
+                  const Icon(Icons.logout, color: AppTheme.errorColor),
+              title: const Text('Cerrar sesión',
+                  style: TextStyle(color: AppTheme.errorColor)),
+              onTap: () {
+                Navigator.pop(context);
+                context.read<AppProvider>().logout();
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                  (_) => false,
+                );
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = context.watch<AppProvider>().currentUser;
@@ -63,10 +134,7 @@ class _ManagerHomeState extends State<ManagerHome> {
       DashboardScreen(
         onActiveTasks: () => _goToTasks(tab: 0),
         onRejectedTasks: () => _goToTasks(tab: 1),
-        onIncidents: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const IncidentsScreen()),
-        ),
+        onIncidents: () => setState(() => _currentIndex = 3),
         onCertificates: () => setState(() => _currentIndex = 3),
         onLowStock: () => _goToInventory(filter: InventoryStatus.bajo),
         onDocScan: () => Navigator.push(
@@ -79,113 +147,63 @@ class _ManagerHomeState extends State<ManagerHome> {
         initialTab: _tasksInitialTab,
       ),
       const CrewScreen(),
+      const IncidentsScreen(),
       const CertificatesScreen(),
       InventoryScreen(
         key: _inventoryKey,
         initialFilter: _inventoryInitialFilter,
       ),
-      const HeyYatScreen(),
+    ];
+
+    // AppBar titles per screen
+    const titles = [
+      'Dashboard',
+      'Tareas',
+      'Tripulación',
+      'Incidencias',
+      'Certificados',
+      'Inventario',
     ];
 
     return Scaffold(
-      drawer: NavigationDrawer(
-        backgroundColor: AppTheme.panel,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 28, 16, 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        title: Row(
+          children: [
+            Text(titles[_currentIndex]),
+            const SizedBox(width: 8),
+            if (!isOnline)
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFef4444).withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: const Row(
                   children: [
-                    CircleAvatar(
-                      radius: 26,
-                      backgroundColor:
-                          AppTheme.accent.withValues(alpha: 0.2),
-                      child: Text(
-                        user?.name.isNotEmpty == true
-                            ? user!.name[0]
-                            : 'G',
-                        style: const TextStyle(
-                            color: AppTheme.accent,
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: isOnline
-                            ? const Color(0xFF10b981)
-                            : const Color(0xFFef4444),
-                      ),
-                    ),
+                    Icon(Icons.wifi_off,
+                        color: Color(0xFFef4444), size: 12),
+                    SizedBox(width: 4),
+                    Text('Offline',
+                        style: TextStyle(
+                            color: Color(0xFFef4444), fontSize: 11)),
                   ],
                 ),
-                const SizedBox(height: 10),
-                Text(user?.name ?? 'Gestor',
-                    style: const TextStyle(
-                        color: AppTheme.textPrimary,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600)),
-                const Text('Gestor / Capitán',
-                    style: TextStyle(
-                        color: AppTheme.textSecondary, fontSize: 12)),
-              ],
-            ),
+              ),
+          ],
+        ),
+        actions: [
+          // HEY YAT shortcut always visible in AppBar
+          IconButton(
+            icon: const Icon(Icons.mic_outlined),
+            tooltip: 'HEY YAT',
+            onPressed: _openHeyYat,
           ),
-          const Divider(color: AppTheme.dividerColor),
-          ListTile(
-            leading: const Icon(Icons.document_scanner_outlined,
-                color: AppTheme.accent),
-            title: const Text('Escanear Documento',
-                style: TextStyle(color: AppTheme.textPrimary)),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (_) => const DocumentScanScreen()));
-            },
-          ),
-          ListTile(
-            leading:
-                const Icon(Icons.warning_amber_outlined, color: AppTheme.accent),
-            title: const Text('Incidencias',
-                style: TextStyle(color: AppTheme.textPrimary)),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (_) => const IncidentsScreen()));
-            },
-          ),
-          const Divider(color: AppTheme.dividerColor),
-          ListTile(
-            leading:
-                const Icon(Icons.switch_account, color: AppTheme.accent),
-            title: const Text('Cambiar de usuario',
-                style: TextStyle(color: AppTheme.textPrimary)),
-            onTap: () {
-              Navigator.pop(context);
-              _switchProfile();
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.logout, color: AppTheme.errorColor),
-            title: const Text('Cerrar Sesión',
-                style: TextStyle(color: AppTheme.errorColor)),
-            onTap: () {
-              context.read<AppProvider>().logout();
-              Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(builder: (_) => const LoginScreen()),
-                (_) => false,
-              );
-            },
+          IconButton(
+            icon: const Icon(Icons.more_vert),
+            tooltip: 'Más opciones',
+            onPressed: () => _showMoreMenu(context),
           ),
         ],
       ),
@@ -237,7 +255,8 @@ class _ManagerHomeState extends State<ManagerHome> {
             icon: Badge(
               isLabelVisible:
                   context.watch<AppProvider>().activeTasks > 0,
-              label: Text('${context.watch<AppProvider>().activeTasks}'),
+              label:
+                  Text('${context.watch<AppProvider>().activeTasks}'),
               child: const Icon(Icons.task_alt_outlined),
             ),
             selectedIcon: const Icon(Icons.task_alt),
@@ -247,6 +266,17 @@ class _ManagerHomeState extends State<ManagerHome> {
             icon: Icon(Icons.group_outlined),
             selectedIcon: Icon(Icons.group),
             label: 'Tripulación',
+          ),
+          NavigationDestination(
+            icon: Badge(
+              isLabelVisible:
+                  context.watch<AppProvider>().openIncidents > 0,
+              label: Text(
+                  '${context.watch<AppProvider>().openIncidents}'),
+              child: const Icon(Icons.warning_amber_outlined),
+            ),
+            selectedIcon: const Icon(Icons.warning_amber),
+            label: 'Incidencias',
           ),
           NavigationDestination(
             icon: Badge(
@@ -270,13 +300,27 @@ class _ManagerHomeState extends State<ManagerHome> {
             selectedIcon: const Icon(Icons.inventory_2),
             label: 'Inventario',
           ),
-          const NavigationDestination(
-            icon: Icon(Icons.mic_outlined),
-            selectedIcon: Icon(Icons.mic),
-            label: 'Hey Yat',
-          ),
         ],
       ),
+    );
+  }
+}
+
+/// Wrapper para abrir HeyYat como pantalla completa desde el gestor
+class _HeyYatPage extends StatelessWidget {
+  const _HeyYatPage();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('HEY YAT'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: const HeyYatScreen(),
     );
   }
 }
