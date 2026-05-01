@@ -39,18 +39,18 @@ void main() async {
         ChangeNotifierProvider.value(value: appProvider),
         ChangeNotifierProvider.value(value: connectivityService),
       ],
-      child: const SmartCrewApp(),
+      child: const SmartYatApp(),
     ),
   );
 }
 
-class SmartCrewApp extends StatelessWidget {
-  const SmartCrewApp({super.key});
+class SmartYatApp extends StatelessWidget {
+  const SmartYatApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'SmartCrew',
+      title: 'SmartYat',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,
       home: const LoginScreen(),

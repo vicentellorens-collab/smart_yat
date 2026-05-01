@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../config/theme.dart';
@@ -69,10 +69,10 @@ class _WelcomeView extends StatelessWidget {
             child: const Center(child: _YachtLogo(size: 62, color: AppTheme.accent)),
           ),
           const SizedBox(height: 28),
-          Text('SmartCrew', style: AppTheme.orbitron(size: 28)),
+          Text('SmartYat', style: AppTheme.orbitron(size: 28)),
           const SizedBox(height: 10),
           Text(
-            'Enhance your crew.',
+            'Intelligent Yacht Management.',
             style: GoogleFonts.exo2(
               color: AppTheme.textSecondary,
               fontSize: 15,
@@ -115,7 +115,7 @@ class _WelcomeView extends StatelessWidget {
           ],
           const SizedBox(height: 20),
           Text(
-            'v2.0.0 · SmartCrew',
+            'v2.3.0 · SmartYat',
             style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11),
           ),
           const SizedBox(height: 8),
@@ -164,7 +164,7 @@ class _RegisterViewState extends State<_RegisterView> {
       return;
     }
     if (pin.length != 4) {
-      _snack('El PIN debe tener exactamente 4 dígitos');
+      _snack('El PIN debe tener exactamente 4 dÃ­gitos');
       return;
     }
     if (pin != confirm) {
@@ -257,7 +257,7 @@ class _RegisterViewState extends State<_RegisterView> {
             controller: _pinCtrl,
             style: const TextStyle(color: AppTheme.textPrimary),
             decoration: const InputDecoration(
-              labelText: 'PIN (exactamente 4 dígitos) *',
+              labelText: 'PIN (exactamente 4 dÃ­gitos) *',
               prefixIcon: Icon(Icons.lock_outline, color: AppTheme.textSecondary),
             ),
             keyboardType: TextInputType.number,
@@ -439,7 +439,7 @@ class _LoginViewState extends State<_LoginView> {
                 ),
               ] else ...[
                 const Text(
-                  'Verificación correcta. Define tu nuevo PIN de 4 dígitos.',
+                  'VerificaciÃ³n correcta. Define tu nuevo PIN de 4 dÃ­gitos.',
                   style: TextStyle(
                       color: AppTheme.successColor, fontSize: 12),
                 ),
@@ -448,7 +448,7 @@ class _LoginViewState extends State<_LoginView> {
                   controller: pin1Ctrl,
                   style: const TextStyle(color: AppTheme.textPrimary),
                   decoration: const InputDecoration(
-                    labelText: 'Nuevo PIN (4 dígitos)',
+                    labelText: 'Nuevo PIN (4 dÃ­gitos)',
                     prefixIcon: Icon(Icons.lock_outline,
                         color: AppTheme.textSecondary),
                   ),
@@ -480,7 +480,7 @@ class _LoginViewState extends State<_LoginView> {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             content: Text(
-                                'El PIN debe tener exactamente 4 dígitos'),
+                                'El PIN debe tener exactamente 4 dÃ­gitos'),
                             backgroundColor: AppTheme.warningColor,
                           ),
                         );
@@ -614,7 +614,7 @@ class _LoginViewState extends State<_LoginView> {
                   fontSize: 16,
                   fontWeight: FontWeight.w600)),
           Text(
-            user.role == UserRole.gestor ? 'Gestor / Capitán' : 'Tripulante',
+            user.role == UserRole.gestor ? 'Gestor / CapitÃ¡n' : 'Tripulante',
             style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
           ),
           const SizedBox(height: 32),
@@ -655,7 +655,7 @@ class _LoginViewState extends State<_LoginView> {
             TextButton(
               onPressed: () => _showAdminRecovery(context),
               child: const Text(
-                '¿Olvidaste tu PIN?',
+                'Â¿Olvidaste tu PIN?',
                 style: TextStyle(
                     color: AppTheme.textSecondary, fontSize: 12),
               ),
@@ -853,7 +853,7 @@ class _YachtPainter extends CustomPainter {
       ..strokeWidth = w * 0.038
       ..strokeCap = StrokeCap.round;
 
-    // Hull — trapezoidal base
+    // Hull â€” trapezoidal base
     canvas.drawPath(
       Path()
         ..moveTo(w * 0.02, h * 0.72)
@@ -909,3 +909,5 @@ class _YachtPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPainter _) => false;
 }
+
+

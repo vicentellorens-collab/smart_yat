@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/models.dart';
@@ -70,7 +70,7 @@ class AppProvider extends ChangeNotifier {
 
   void setConnectivityService(ConnectivityService service) {
     _connectivityService = service;
-    // Sincronizar automáticamente al recuperar conexión
+    // Sincronizar automÃ¡ticamente al recuperar conexiÃ³n
     service.addListener(_onConnectivityChanged);
   }
 
@@ -84,7 +84,7 @@ class AppProvider extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
-    // 1. Carga local primero (instantánea)
+    // 1. Carga local primero (instantÃ¡nea)
     _tasks = await _storage.loadTasks();
     _crew = await _storage.loadCrew();
     _certificates = await _storage.loadCertificates();
@@ -104,15 +104,15 @@ class AppProvider extends ChangeNotifier {
     _isLoading = false;
     notifyListeners();
 
-    // 2. Pull desde Supabase en segundo plano si hay conexión
+    // 2. Pull desde Supabase en segundo plano si hay conexiÃ³n
     if (_yachtConfig != null &&
         _connectivityService?.isOnline != false) {
       syncWithCloud();
     }
   }
 
-  /// Sincronización bidireccional con Supabase.
-  /// Estrategia: pull desde nube → merge con local (nube gana en conflictos) → save local.
+  /// SincronizaciÃ³n bidireccional con Supabase.
+  /// Estrategia: pull desde nube â†’ merge con local (nube gana en conflictos) â†’ save local.
   Future<void> syncWithCloud() async {
     final yachtId = _yachtConfig?.id;
     if (yachtId == null) return;
@@ -125,7 +125,7 @@ class AppProvider extends ChangeNotifier {
 
       if (snapshot != null) {
         // Merge: la nube tiene prioridad sobre local para datos compartidos.
-        // Los datos locales que no están en la nube se suben.
+        // Los datos locales que no estÃ¡n en la nube se suben.
         _mergeFromCloud(snapshot);
         await _saveAllLocal();
       }
@@ -148,7 +148,7 @@ class AppProvider extends ChangeNotifier {
 
       _lastSyncAt = DateTime.now();
     } catch (_) {
-      // Sync falla silenciosamente — la app sigue funcionando offline
+      // Sync falla silenciosamente â€” la app sigue funcionando offline
     }
 
     _isSyncing = false;
@@ -157,7 +157,7 @@ class AppProvider extends ChangeNotifier {
 
   void _mergeFromCloud(CloudSnapshot snap) {
     // Para cada entidad: si la nube tiene registros, reemplaza local.
-    // Si la nube está vacía (primer sync desde este dispositivo), mantiene local.
+    // Si la nube estÃ¡ vacÃ­a (primer sync desde este dispositivo), mantiene local.
     if (snap.tasks.isNotEmpty) _tasks = snap.tasks;
     if (snap.crew.isNotEmpty) _crew = snap.crew;
     if (snap.certificates.isNotEmpty) _certificates = snap.certificates;
@@ -184,16 +184,16 @@ class AppProvider extends ChangeNotifier {
 
     _crew = [
       CrewMember(id: 'c1', name: 'Carlos Ruiz', role: 'Segundo Oficial'),
-      CrewMember(id: 'c2', name: 'María López', role: 'Cubierta'),
-      CrewMember(id: 'c3', name: 'Juan García', role: 'Marinero'),
-      CrewMember(id: 'c4', name: 'Ana Martínez', role: 'Cocinera'),
+      CrewMember(id: 'c2', name: 'MarÃ­a LÃ³pez', role: 'Cubierta'),
+      CrewMember(id: 'c3', name: 'Juan GarcÃ­a', role: 'Marinero'),
+      CrewMember(id: 'c4', name: 'Ana MartÃ­nez', role: 'Cocinera'),
     ];
 
     _tasks = [
       Task(
         id: 't1',
         title: 'Revisar motor de babor',
-        description: 'Inspección rutinaria del motor principal de babor.',
+        description: 'InspecciÃ³n rutinaria del motor principal de babor.',
         assignedToId: 'c1',
         assignedToName: 'Carlos Ruiz',
         priority: TaskPriority.alta,
@@ -204,32 +204,32 @@ class AppProvider extends ChangeNotifier {
         title: 'Limpiar cubierta principal',
         description: 'Limpieza completa de la cubierta de popa.',
         assignedToId: 'c2',
-        assignedToName: 'María López',
+        assignedToName: 'MarÃ­a LÃ³pez',
         priority: TaskPriority.media,
         createdAt: now.subtract(const Duration(hours: 5)),
       ),
       Task(
         id: 't3',
-        title: 'Verificar luces de navegación',
+        title: 'Verificar luces de navegaciÃ³n',
         description: 'Comprobar el funcionamiento de todas las luces.',
         assignedToId: 'c3',
-        assignedToName: 'Juan García',
+        assignedToName: 'Juan GarcÃ­a',
         priority: TaskPriority.media,
         createdAt: now.subtract(const Duration(days: 1)),
       ),
       Task(
         id: 't4',
-        title: 'Preparar menú del owner',
+        title: 'Preparar menÃº del owner',
         description: 'Sushi y marisco. Sin carne roja.',
         assignedToId: 'c4',
-        assignedToName: 'Ana Martínez',
+        assignedToName: 'Ana MartÃ­nez',
         priority: TaskPriority.alta,
         createdAt: now.subtract(const Duration(hours: 1)),
       ),
       Task(
         id: 't5',
         title: 'Inventario de combustible',
-        description: 'Registrar nivel actual y proyección.',
+        description: 'Registrar nivel actual y proyecciÃ³n.',
         assignedToId: 'c1',
         assignedToName: 'Carlos Ruiz',
         status: TaskStatus.completada,
@@ -242,7 +242,7 @@ class AppProvider extends ChangeNotifier {
         title: 'Mantenimiento ancla',
         description: 'Revisar cadena y mecanismo de anclaje.',
         assignedToId: 'c2',
-        assignedToName: 'María López',
+        assignedToName: 'MarÃ­a LÃ³pez',
         status: TaskStatus.enProgreso,
         priority: TaskPriority.media,
         createdAt: now.subtract(const Duration(hours: 8)),
@@ -253,8 +253,8 @@ class AppProvider extends ChangeNotifier {
       Certificate(
         id: 'cert1',
         name: 'Pasavante',
-        issuer: 'Capitanía de Puerto',
-        type: 'Navegación',
+        issuer: 'CapitanÃ­a de Puerto',
+        type: 'NavegaciÃ³n',
         expiryDate: now.add(const Duration(days: 12)),
       ),
       Certificate(
@@ -281,10 +281,10 @@ class AppProvider extends ChangeNotifier {
       Certificate(
         id: 'cert5',
         name: 'Certificado Sanitario',
-        issuer: 'Sanidad Marítima',
+        issuer: 'Sanidad MarÃ­tima',
         type: 'Salud',
         expiryDate: now.subtract(const Duration(days: 5)),
-        notes: 'VENCIDO — Renovar urgentemente',
+        notes: 'VENCIDO â€” Renovar urgentemente',
       ),
     ];
 
@@ -292,25 +292,25 @@ class AppProvider extends ChangeNotifier {
       InventoryItem(
         id: 'i1',
         name: 'Aceite de Motor',
-        category: 'Mecánica',
+        category: 'MecÃ¡nica',
         quantity: 3,
         unit: 'L',
         minLevel: 10,
-        location: 'Sala de máquinas',
+        location: 'Sala de mÃ¡quinas',
       ),
       InventoryItem(
         id: 'i2',
-        name: 'Lejía',
+        name: 'LejÃ­a',
         category: 'Limpieza',
         quantity: 2,
         unit: 'unid',
         minLevel: 5,
-        location: 'Pañol limpieza',
+        location: 'PaÃ±ol limpieza',
       ),
       InventoryItem(
         id: 'i3',
         name: 'Combustible',
-        category: 'Propulsión',
+        category: 'PropulsiÃ³n',
         quantity: 1200,
         unit: 'L',
         minLevel: 500,
@@ -323,11 +323,11 @@ class AppProvider extends ChangeNotifier {
         quantity: 800,
         unit: 'L',
         minLevel: 200,
-        location: 'Depósito',
+        location: 'DepÃ³sito',
       ),
       InventoryItem(
         id: 'i5',
-        name: 'Bengalas de Señalización',
+        name: 'Bengalas de SeÃ±alizaciÃ³n',
         category: 'Seguridad',
         quantity: 0,
         unit: 'unid',
@@ -337,11 +337,11 @@ class AppProvider extends ChangeNotifier {
       InventoryItem(
         id: 'i6',
         name: 'Filtros de Aceite',
-        category: 'Mecánica',
+        category: 'MecÃ¡nica',
         quantity: 1,
         unit: 'unid',
         minLevel: 3,
-        location: 'Sala de máquinas',
+        location: 'Sala de mÃ¡quinas',
       ),
     ];
 
@@ -363,21 +363,21 @@ class AppProvider extends ChangeNotifier {
       OwnerPreference(
         id: 'p3',
         type: OwnerPreferenceType.bebida,
-        detail: 'Prefiere champagne Dom Pérignon',
+        detail: 'Prefiere champagne Dom PÃ©rignon',
         isPositive: true,
         createdAt: now.subtract(const Duration(days: 7)),
       ),
       OwnerPreference(
         id: 'p4',
         type: OwnerPreferenceType.temperatura,
-        detail: 'Cabina a 22°C, salón a 24°C',
+        detail: 'Cabina a 22Â°C, salÃ³n a 24Â°C',
         isPositive: true,
         createdAt: now.subtract(const Duration(days: 5)),
       ),
       OwnerPreference(
         id: 'p5',
         type: OwnerPreferenceType.musica,
-        detail: 'Jazz en el salón durante las comidas',
+        detail: 'Jazz en el salÃ³n durante las comidas',
         isPositive: true,
         createdAt: now.subtract(const Duration(days: 3)),
       ),
@@ -386,9 +386,9 @@ class AppProvider extends ChangeNotifier {
     _incidents = [
       Incident(
         id: 'inc1',
-        title: 'Vibración en winch 3',
+        title: 'VibraciÃ³n en winch 3',
         description:
-            'El winch número 3 presenta vibración anormal durante la operación.',
+            'El winch nÃºmero 3 presenta vibraciÃ³n anormal durante la operaciÃ³n.',
         location: 'Cubierta proa',
         priority: TaskPriority.alta,
         reportedBy: 'Carlos Ruiz',
@@ -396,12 +396,12 @@ class AppProvider extends ChangeNotifier {
       ),
       Incident(
         id: 'inc2',
-        title: 'Grifo con fuga en baño proa',
+        title: 'Grifo con fuga en baÃ±o proa',
         description: 'El grifo gotea constantemente.',
-        location: 'Baño de proa',
+        location: 'BaÃ±o de proa',
         priority: TaskPriority.baja,
         status: IncidentStatus.enProgreso,
-        reportedBy: 'María López',
+        reportedBy: 'MarÃ­a LÃ³pez',
         reportedAt: now.subtract(const Duration(days: 1)),
       ),
     ];
@@ -460,7 +460,7 @@ class AppProvider extends ChangeNotifier {
     // Si no hay email real, generamos uno interno para Supabase Auth
     final authEmail = (email != null && email.isNotEmpty)
         ? email
-        : 'admin-${DateTime.now().millisecondsSinceEpoch}@smartcrew.internal';
+        : 'admin-${DateTime.now().millisecondsSinceEpoch}@smartyat.internal';
     final authPassword = AuthService.generateSecurePassword();
 
     // Intentar crear cuenta en Supabase Auth; si falla, seguimos con ID local
@@ -529,9 +529,9 @@ class AppProvider extends ChangeNotifier {
     String? department,
     String? photoPath,
   }) async {
-    // Email interno para Supabase Auth — el tripulante nunca lo ve
+    // Email interno para Supabase Auth â€” el tripulante nunca lo ve
     final internalEmail =
-        'crew-${DateTime.now().millisecondsSinceEpoch}@smartcrew.internal';
+        'crew-${DateTime.now().millisecondsSinceEpoch}@smartyat.internal';
     final authPassword = AuthService.generateSecurePassword();
 
     // Intentar crear cuenta en Supabase Auth; si falla, seguimos con ID local
@@ -977,7 +977,7 @@ class AppProvider extends ChangeNotifier {
           description: cmd.transcript,
           location: _str(result.datosExtraidos['ubicacion']),
           priority: _parsePriority(result.prioridad),
-          reportedBy: _currentUser?.name ?? 'Tripulación',
+          reportedBy: _currentUser?.name ?? 'TripulaciÃ³n',
           reportedAt: now,
         ));
         break;
@@ -1044,13 +1044,13 @@ class AppProvider extends ChangeNotifier {
         .where((i) => i.status != InventoryStatus.ok)
         .toList();
     if (lowStock.isEmpty) {
-      return 'El inventario está completo. No hay artículos por comprar.';
+      return 'El inventario estÃ¡ completo. No hay artÃ­culos por comprar.';
     }
     final items = lowStock.map((i) {
       if (i.status == InventoryStatus.sinStock) {
         return '${i.name} (agotado)';
       }
-      return '${i.name} (quedan ${i.quantity} ${i.unit}, mínimo ${i.minLevel})';
+      return '${i.name} (quedan ${i.quantity} ${i.unit}, mÃ­nimo ${i.minLevel})';
     }).join(', ');
     return 'Necesitas comprar: $items';
   }
@@ -1141,3 +1141,4 @@ class AppProvider extends ChangeNotifier {
     }
   }
 }
+

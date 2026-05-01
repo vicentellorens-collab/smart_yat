@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../config/theme.dart';
 import '../../models/models.dart';
@@ -30,7 +30,7 @@ class DashboardScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('SmartCrew'),
+        title: const Text('SmartYat'),
         leading: Builder(
           builder: (ctx) => IconButton(
             icon: const Icon(Icons.menu),
@@ -61,7 +61,7 @@ class DashboardScreen extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           children: [
             // Greeting
-            Text('Buen día, ${user?.name ?? 'Capitán'}',
+            Text('Buen dÃ­a, ${user?.name ?? 'CapitÃ¡n'}',
                 style: AppTheme.orbitron(size: 14)),
             const SizedBox(height: 4),
             const Text(
@@ -70,7 +70,7 @@ class DashboardScreen extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             const Text(
-              'Pulsa un widget para ir al módulo',
+              'Pulsa un widget para ir al mÃ³dulo',
               style: TextStyle(
                   color: AppTheme.textSecondary,
                   fontSize: 11,
@@ -389,3 +389,4 @@ class _TaskTile extends StatelessWidget {
     );
   }
 }
+

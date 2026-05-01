@@ -1,7 +1,7 @@
 name: smart_yat
-description: "SmartCrew - Intelligent Yacht Crew Management"
+description: "SmartYat - Intelligent Yacht Management System"
 publish_to: 'none'
-version: 1.0.0+1
+version: 2.3.0+1
 
 environment:
   sdk: ^3.5.0

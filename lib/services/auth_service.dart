@@ -1,9 +1,9 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import 'dart:math';
 
 class AuthService {
   static String hashPin(String pin) {
-    final input = pin + 'smartcrew_salt_2024';
+    final input = pin + 'smartyat_salt_2024';
     final bytes = utf8.encode(input);
     return base64.encode(bytes);
   }
@@ -12,8 +12,8 @@ class AuthService {
     return hashPin(pin) == hash;
   }
 
-  /// Genera una contraseña aleatoria fuerte de 32 caracteres.
-  /// El usuario nunca ve ni introduce esta contraseña.
+  /// Genera una contraseÃ±a aleatoria fuerte de 32 caracteres.
+  /// El usuario nunca ve ni introduce esta contraseÃ±a.
   static String generateSecurePassword() {
     const chars =
         'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#\$%^&*';
@@ -21,3 +21,4 @@ class AuthService {
     return List.generate(32, (_) => chars[rng.nextInt(chars.length)]).join();
   }
 }
+
