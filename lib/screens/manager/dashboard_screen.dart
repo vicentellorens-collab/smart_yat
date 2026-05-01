@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../config/theme.dart';
 import '../../models/models.dart';
@@ -13,7 +13,7 @@ class DashboardScreen extends StatelessWidget {
   final VoidCallback onLowStock;
   final VoidCallback onDocScan;
 
-  DashboardScreen({
+  const DashboardScreen({
     super.key,
     required this.onActiveTasks,
     required this.onRejectedTasks,
@@ -28,205 +28,176 @@ class DashboardScreen extends StatelessWidget {
     final p = context.watch<AppProvider>();
     final user = p.currentUser;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('SmartYat'),
-        leading: Builder(
-          builder: (ctx) => IconButton(
-            icon: const Icon(Icons.menu),
-            onPressed: () => Scaffold.of(ctx).openDrawer(),
+    return RefreshIndicator(
+      color: AppTheme.accent,
+      onRefresh: () async {},
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          // Greeting
+          Text(
+            'Buen día, ${user?.name ?? 'Capitán'}',
+            style: AppTheme.orbitron(size: 14),
           ),
-        ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: CircleAvatar(
-              radius: 16,
-              backgroundColor: AppTheme.accent.withOpacity(0.2),
-              child: Text(
-                user?.name.isNotEmpty == true ? user!.name[0] : 'G',
-                style: const TextStyle(
-                    color: AppTheme.accent,
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold),
-              ),
-            ),
+          const SizedBox(height: 4),
+          const Text(
+            'Estado del yate en tiempo real',
+            style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
           ),
-        ],
-      ),
-      body: RefreshIndicator(
-        color: AppTheme.accent,
-        onRefresh: () async {},
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            // Greeting
-            Text('Buen dÃ­a, ${user?.name ?? 'CapitÃ¡n'}',
-                style: AppTheme.orbitron(size: 14)),
-            const SizedBox(height: 4),
-            const Text(
-              'Estado del yate en tiempo real',
-              style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Pulsa un widget para ir al mÃ³dulo',
-              style: TextStyle(
-                  color: AppTheme.textSecondary,
-                  fontSize: 11,
-                  fontStyle: FontStyle.italic),
-            ),
-            const SizedBox(height: 16),
+          const SizedBox(height: 8),
+          const Text(
+            'Pulsa un widget para ir al módulo',
+            style: TextStyle(
+                color: AppTheme.textSecondary,
+                fontSize: 11,
+                fontStyle: FontStyle.italic),
+          ),
+          const SizedBox(height: 16),
 
-            // Stats grid
-            GridView.count(
-              crossAxisCount: 2,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              childAspectRatio: 1.4,
-              children: [
-                StatCard(
-                  label: 'Tareas Activas',
-                  value: '${p.activeTasks}',
-                  icon: Icons.task_alt_outlined,
-                  color: AppTheme.accent,
-                  onTap: onActiveTasks,
-                ),
-                StatCard(
-                  label: 'Tareas Rechazadas',
-                  value: '${p.rejectedTasks}',
-                  icon: Icons.cancel_outlined,
-                  color: p.rejectedTasks > 0
-                      ? AppTheme.errorColor
-                      : AppTheme.successColor,
-                  onTap: onRejectedTasks,
-                ),
-                StatCard(
-                  label: 'Incidencias Abiertas',
-                  value: '${p.openIncidents}',
-                  icon: Icons.warning_amber_outlined,
-                  color: p.openIncidents > 0
-                      ? AppTheme.errorColor
-                      : AppTheme.successColor,
-                  onTap: onIncidents,
-                ),
-                StatCard(
-                  label: 'Certs. con Alerta',
-                  value: '${p.alertCertificates}',
-                  icon: Icons.verified_outlined,
-                  color: p.alertCertificates > 0
-                      ? AppTheme.warningColor
-                      : AppTheme.successColor,
-                  onTap: onCertificates,
-                ),
-                StatCard(
-                  label: 'Stock Bajo/Agotado',
-                  value: '${p.lowStockItems}',
-                  icon: Icons.inventory_2_outlined,
-                  color: p.lowStockItems > 0
-                      ? AppTheme.warningColor
-                      : AppTheme.successColor,
-                  onTap: onLowStock,
-                ),
-                StatCard(
-                  label: 'Docs Escaneados',
-                  value: '${p.scannedDocuments.length}',
-                  icon: Icons.document_scanner_outlined,
-                  color: AppTheme.accent,
-                  onTap: onDocScan,
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-
-            // Urgent incidents
-            if (p.incidents
-                .where((i) => i.status == IncidentStatus.abierta)
-                .isNotEmpty) ...[
-              SectionTitle(
-                'INCIDENCIAS ACTIVAS',
-                trailing: TextButton(
-                  onPressed: onIncidents,
-                  child: const Text('Ver todas',
-                      style: TextStyle(
-                          color: AppTheme.accent, fontSize: 12)),
-                ),
+          // Stats grid
+          GridView.count(
+            crossAxisCount: 2,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: 1.4,
+            children: [
+              StatCard(
+                label: 'Tareas Activas',
+                value: '${p.activeTasks}',
+                icon: Icons.task_alt_outlined,
+                color: AppTheme.accent,
+                onTap: onActiveTasks,
               ),
-              const SizedBox(height: 10),
-              ...p.incidents
-                  .where((i) => i.status == IncidentStatus.abierta)
-                  .take(3)
-                  .map((inc) => _IncidentTile(inc)),
-              const SizedBox(height: 20),
-            ],
-
-            // Expiring certs
-            if (p.certificates
-                .where((c) =>
-                    c.alertLevel == AlertLevel.days15 ||
-                    c.alertLevel == AlertLevel.expired)
-                .isNotEmpty) ...[
-              SectionTitle(
-                'CERTIFICADOS URGENTES',
-                trailing: TextButton(
-                  onPressed: onCertificates,
-                  child: const Text('Ver todos',
-                      style: TextStyle(
-                          color: AppTheme.accent, fontSize: 12)),
-                ),
+              StatCard(
+                label: 'Tareas Rechazadas',
+                value: '${p.rejectedTasks}',
+                icon: Icons.cancel_outlined,
+                color: p.rejectedTasks > 0
+                    ? AppTheme.errorColor
+                    : AppTheme.successColor,
+                onTap: onRejectedTasks,
               ),
-              const SizedBox(height: 10),
-              ...p.certificates
-                  .where((c) =>
-                      c.alertLevel == AlertLevel.days15 ||
-                      c.alertLevel == AlertLevel.expired)
-                  .map((c) => _CertAlert(c)),
-              const SizedBox(height: 20),
-            ],
-
-            // Low stock
-            if (p.inventory
-                .where((i) => i.status == InventoryStatus.sinStock)
-                .isNotEmpty) ...[
-              SectionTitle(
-                'SIN STOCK',
-                trailing: TextButton(
-                  onPressed: onLowStock,
-                  child: const Text('Ver todo',
-                      style: TextStyle(
-                          color: AppTheme.accent, fontSize: 12)),
-                ),
+              StatCard(
+                label: 'Incidencias Abiertas',
+                value: '${p.openIncidents}',
+                icon: Icons.warning_amber_outlined,
+                color: p.openIncidents > 0
+                    ? AppTheme.errorColor
+                    : AppTheme.successColor,
+                onTap: onIncidents,
               ),
-              const SizedBox(height: 10),
-              ...p.inventory
-                  .where((i) => i.status == InventoryStatus.sinStock)
-                  .map((i) => _StockAlert(i)),
-              const SizedBox(height: 20),
+              StatCard(
+                label: 'Certs. con Alerta',
+                value: '${p.alertCertificates}',
+                icon: Icons.verified_outlined,
+                color: p.alertCertificates > 0
+                    ? AppTheme.warningColor
+                    : AppTheme.successColor,
+                onTap: onCertificates,
+              ),
+              StatCard(
+                label: 'Stock Bajo/Agotado',
+                value: '${p.lowStockItems}',
+                icon: Icons.inventory_2_outlined,
+                color: p.lowStockItems > 0
+                    ? AppTheme.warningColor
+                    : AppTheme.successColor,
+                onTap: onLowStock,
+              ),
+              StatCard(
+                label: 'Docs Escaneados',
+                value: '${p.scannedDocuments.length}',
+                icon: Icons.document_scanner_outlined,
+                color: AppTheme.accent,
+                onTap: onDocScan,
+              ),
             ],
+          ),
+          const SizedBox(height: 24),
 
-            // Recent tasks
+          // Urgent incidents
+          if (p.incidents
+              .where((i) => i.status == IncidentStatus.abierta)
+              .isNotEmpty) ...[
             SectionTitle(
-              'TAREAS RECIENTES',
+              'INCIDENCIAS ACTIVAS',
               trailing: TextButton(
-                onPressed: onActiveTasks,
+                onPressed: onIncidents,
                 child: const Text('Ver todas',
-                    style:
-                        TextStyle(color: AppTheme.accent, fontSize: 12)),
+                    style: TextStyle(color: AppTheme.accent, fontSize: 12)),
               ),
             ),
             const SizedBox(height: 10),
-            ...p.tasks
-                .where((t) =>
-                    t.status == TaskStatus.pendiente ||
-                    t.status == TaskStatus.enProgreso)
-                .take(4)
-                .map((t) => _TaskTile(t)),
-
-            const SizedBox(height: 80),
+            ...p.incidents
+                .where((i) => i.status == IncidentStatus.abierta)
+                .take(3)
+                .map((inc) => _IncidentTile(inc)),
+            const SizedBox(height: 20),
           ],
-        ),
+
+          // Expiring certs
+          if (p.certificates
+              .where((c) =>
+                  c.alertLevel == AlertLevel.days15 ||
+                  c.alertLevel == AlertLevel.expired)
+              .isNotEmpty) ...[
+            SectionTitle(
+              'CERTIFICADOS URGENTES',
+              trailing: TextButton(
+                onPressed: onCertificates,
+                child: const Text('Ver todos',
+                    style: TextStyle(color: AppTheme.accent, fontSize: 12)),
+              ),
+            ),
+            const SizedBox(height: 10),
+            ...p.certificates
+                .where((c) =>
+                    c.alertLevel == AlertLevel.days15 ||
+                    c.alertLevel == AlertLevel.expired)
+                .map((c) => _CertAlert(c)),
+            const SizedBox(height: 20),
+          ],
+
+          // Low stock
+          if (p.inventory
+              .where((i) => i.status == InventoryStatus.sinStock)
+              .isNotEmpty) ...[
+            SectionTitle(
+              'SIN STOCK',
+              trailing: TextButton(
+                onPressed: onLowStock,
+                child: const Text('Ver todo',
+                    style: TextStyle(color: AppTheme.accent, fontSize: 12)),
+              ),
+            ),
+            const SizedBox(height: 10),
+            ...p.inventory
+                .where((i) => i.status == InventoryStatus.sinStock)
+                .map((i) => _StockAlert(i)),
+            const SizedBox(height: 20),
+          ],
+
+          // Recent tasks
+          SectionTitle(
+            'TAREAS RECIENTES',
+            trailing: TextButton(
+              onPressed: onActiveTasks,
+              child: const Text('Ver todas',
+                  style: TextStyle(color: AppTheme.accent, fontSize: 12)),
+            ),
+          ),
+          const SizedBox(height: 10),
+          ...p.tasks
+              .where((t) =>
+                  t.status == TaskStatus.pendiente ||
+                  t.status == TaskStatus.enProgreso)
+              .take(4)
+              .map((t) => _TaskTile(t)),
+
+          const SizedBox(height: 80),
+        ],
       ),
     );
   }
@@ -389,4 +360,3 @@ class _TaskTile extends StatelessWidget {
     );
   }
 }
-
