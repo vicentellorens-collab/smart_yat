@@ -103,7 +103,6 @@ class SmartYatLogo extends StatelessWidget {
                 fontSize: 13,
                 color: taglineColor,
                 letterSpacing: 1.6,
-                height: 1.0,
               ),
             ),
           ],

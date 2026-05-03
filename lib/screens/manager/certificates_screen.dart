@@ -805,14 +805,15 @@ class _CertCard extends StatelessWidget {
       onDismissed: (_) => onDelete(),
       child: GestureDetector(
         onTap: onEdit,
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: _bgColor,
-            borderRadius: BorderRadius.circular(10),
-            border: _border,
-          ),
-          child: Row(
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: _bgColor,
+              border: _border,
+            ),
+            child: Row(
             children: [
               Icon(Icons.verified_outlined, color: _accentColor, size: 22),
               const SizedBox(width: 14),
@@ -853,6 +854,7 @@ class _CertCard extends StatelessWidget {
               AlertBadge(cert.alertLevel, cert.daysUntilExpiry),
             ],
           ),
+        ),
         ),
       ),
     );

@@ -542,14 +542,15 @@ class _ItemCard extends StatelessWidget {
       onDismissed: (_) => onDelete(),
       child: GestureDetector(
         onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: bgColor,
-            borderRadius: BorderRadius.circular(10),
-            border: border,
-          ),
-          child: Row(
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: bgColor,
+              border: border,
+            ),
+            child: Row(
             children: [
               Expanded(
                 child: Column(
@@ -582,6 +583,7 @@ class _ItemCard extends StatelessWidget {
               ),
             ],
           ),
+        ),
         ),
       ),
     );

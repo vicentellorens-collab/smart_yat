@@ -192,40 +192,44 @@ class _IncidentTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppTheme.statusAlertBg,
+      child: ClipRRect(
         borderRadius: BorderRadius.circular(10),
-        border: const Border(
-          left: BorderSide(color: AppTheme.statusAlert, width: 3),
-          top: BorderSide(color: AppTheme.borderSubtle, width: 1),
-          right: BorderSide(color: AppTheme.borderSubtle, width: 1),
-          bottom: BorderSide(color: AppTheme.borderSubtle, width: 1),
-        ),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.warning_amber_rounded,
-              color: AppTheme.statusAlert, size: 20),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(inc.title,
-                    style: const TextStyle(
-                        color: AppTheme.textPrimary,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 13)),
-                if (inc.location != null)
-                  Text(inc.location!,
-                      style: const TextStyle(
-                          color: AppTheme.textSecondary, fontSize: 13)),
-              ],
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: const BoxDecoration(
+            color: AppTheme.statusAlertBg,
+            border: Border(
+              left: BorderSide(color: AppTheme.statusAlert, width: 3),
+              top: BorderSide(color: AppTheme.borderSubtle, width: 1),
+              right: BorderSide(color: AppTheme.borderSubtle, width: 1),
+              bottom: BorderSide(color: AppTheme.borderSubtle, width: 1),
             ),
           ),
-          PriorityBadge(inc.priority),
-        ],
+          child: Row(
+            children: [
+              const Icon(Icons.warning_amber_rounded,
+                  color: AppTheme.statusAlert, size: 20),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(inc.title,
+                        style: const TextStyle(
+                            color: AppTheme.textPrimary,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13)),
+                    if (inc.location != null)
+                      Text(inc.location!,
+                          style: const TextStyle(
+                              color: AppTheme.textSecondary, fontSize: 13)),
+                  ],
+                ),
+              ),
+              PriorityBadge(inc.priority),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -239,41 +243,45 @@ class _CertAlert extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppTheme.statusWarnBg,
+      child: ClipRRect(
         borderRadius: BorderRadius.circular(10),
-        border: const Border(
-          left: BorderSide(color: AppTheme.statusWarn, width: 3),
-          top: BorderSide(color: AppTheme.borderSubtle, width: 1),
-          right: BorderSide(color: AppTheme.borderSubtle, width: 1),
-          bottom: BorderSide(color: AppTheme.borderSubtle, width: 1),
-        ),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.verified_outlined,
-              color: AppTheme.statusWarn, size: 20),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(cert.name,
-                    style: const TextStyle(
-                        color: AppTheme.textPrimary,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 13)),
-                if (cert.certCategory == 'tripulante' &&
-                    cert.crewMemberName != null)
-                  Text('Tripulante: ${cert.crewMemberName}',
-                      style: const TextStyle(
-                          color: AppTheme.textSecondary, fontSize: 13)),
-              ],
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: const BoxDecoration(
+            color: AppTheme.statusWarnBg,
+            border: Border(
+              left: BorderSide(color: AppTheme.statusWarn, width: 3),
+              top: BorderSide(color: AppTheme.borderSubtle, width: 1),
+              right: BorderSide(color: AppTheme.borderSubtle, width: 1),
+              bottom: BorderSide(color: AppTheme.borderSubtle, width: 1),
             ),
           ),
-          AlertBadge(cert.alertLevel, cert.daysUntilExpiry),
-        ],
+          child: Row(
+            children: [
+              const Icon(Icons.verified_outlined,
+                  color: AppTheme.statusWarn, size: 20),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(cert.name,
+                        style: const TextStyle(
+                            color: AppTheme.textPrimary,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13)),
+                    if (cert.certCategory == 'tripulante' &&
+                        cert.crewMemberName != null)
+                      Text('Tripulante: ${cert.crewMemberName}',
+                          style: const TextStyle(
+                              color: AppTheme.textSecondary, fontSize: 13)),
+                  ],
+                ),
+              ),
+              AlertBadge(cert.alertLevel, cert.daysUntilExpiry),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -287,31 +295,35 @@ class _StockAlert extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppTheme.statusAlertBg,
+      child: ClipRRect(
         borderRadius: BorderRadius.circular(10),
-        border: const Border(
-          left: BorderSide(color: AppTheme.statusAlert, width: 3),
-          top: BorderSide(color: AppTheme.borderSubtle, width: 1),
-          right: BorderSide(color: AppTheme.borderSubtle, width: 1),
-          bottom: BorderSide(color: AppTheme.borderSubtle, width: 1),
-        ),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.inventory_2_outlined,
-              color: AppTheme.statusAlert, size: 20),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(item.name,
-                style: const TextStyle(
-                    color: AppTheme.textPrimary,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13)),
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: const BoxDecoration(
+            color: AppTheme.statusAlertBg,
+            border: Border(
+              left: BorderSide(color: AppTheme.statusAlert, width: 3),
+              top: BorderSide(color: AppTheme.borderSubtle, width: 1),
+              right: BorderSide(color: AppTheme.borderSubtle, width: 1),
+              bottom: BorderSide(color: AppTheme.borderSubtle, width: 1),
+            ),
           ),
-          InventoryBadge(item.status),
-        ],
+          child: Row(
+            children: [
+              const Icon(Icons.inventory_2_outlined,
+                  color: AppTheme.statusAlert, size: 20),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(item.name,
+                    style: const TextStyle(
+                        color: AppTheme.textPrimary,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13)),
+              ),
+              InventoryBadge(item.status),
+            ],
+          ),
+        ),
       ),
     );
   }

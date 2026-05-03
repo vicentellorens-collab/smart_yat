@@ -46,34 +46,36 @@ class StatCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: _hasStatus
-              ? (color == AppTheme.statusAlert
-                  ? AppTheme.statusAlertBg
-                  : AppTheme.statusWarnBg)
-              : AppTheme.surface01,
-          borderRadius: BorderRadius.circular(10),
-          border: Border(
-            left: BorderSide(
-              color: _hasStatus ? color : AppTheme.borderSubtle,
-              width: _hasStatus ? 3 : 1,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: _hasStatus
+                ? (color == AppTheme.statusAlert
+                    ? AppTheme.statusAlertBg
+                    : AppTheme.statusWarnBg)
+                : AppTheme.surface01,
+            border: Border(
+              left: BorderSide(
+                color: _hasStatus ? color : AppTheme.borderSubtle,
+                width: _hasStatus ? 3 : 1,
+              ),
+              top: const BorderSide(color: AppTheme.borderSubtle, width: 1),
+              right: const BorderSide(color: AppTheme.borderSubtle, width: 1),
+              bottom: const BorderSide(color: AppTheme.borderSubtle, width: 1),
             ),
-            top: const BorderSide(color: AppTheme.borderSubtle, width: 1),
-            right: const BorderSide(color: AppTheme.borderSubtle, width: 1),
-            bottom: const BorderSide(color: AppTheme.borderSubtle, width: 1),
           ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, color: color, size: 20),
-            const SizedBox(height: 8),
-            Text(value, style: AppTheme.displayCondensed(size: 34, color: color)),
-            const SizedBox(height: 4),
-            Text(label, style: AppTheme.label(size: 13)),
-          ],
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icon, color: color, size: 20),
+              const SizedBox(height: 8),
+              Text(value, style: AppTheme.displayCondensed(size: 34, color: color)),
+              const SizedBox(height: 4),
+              Flexible(child: Text(label, style: AppTheme.label(size: 13), overflow: TextOverflow.ellipsis)),
+            ],
+          ),
         ),
       ),
     );

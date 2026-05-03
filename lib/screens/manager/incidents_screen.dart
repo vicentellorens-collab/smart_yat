@@ -161,21 +161,22 @@ class _IncidentCard extends StatelessWidget {
       IncidentStatus.resuelta => 'RESUELTA',
     };
 
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: isActive ? AppTheme.statusAlertBg : AppTheme.surface01,
-        borderRadius: BorderRadius.circular(10),
-        border: isActive
-            ? const Border(
-                left: BorderSide(color: AppTheme.statusAlert, width: 3),
-                top: BorderSide(color: AppTheme.borderSubtle, width: 1),
-                right: BorderSide(color: AppTheme.borderSubtle, width: 1),
-                bottom: BorderSide(color: AppTheme.borderSubtle, width: 1),
-              )
-            : Border.all(color: AppTheme.borderSubtle),
-      ),
-      child: Column(
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: isActive ? AppTheme.statusAlertBg : AppTheme.surface01,
+          border: isActive
+              ? const Border(
+                  left: BorderSide(color: AppTheme.statusAlert, width: 3),
+                  top: BorderSide(color: AppTheme.borderSubtle, width: 1),
+                  right: BorderSide(color: AppTheme.borderSubtle, width: 1),
+                  bottom: BorderSide(color: AppTheme.borderSubtle, width: 1),
+                )
+              : Border.all(color: AppTheme.borderSubtle),
+        ),
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
@@ -309,6 +310,7 @@ class _IncidentCard extends StatelessWidget {
             ],
           ),
         ],
+      ),
       ),
     );
   }
