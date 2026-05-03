@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:smart_yat/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import '../config/theme.dart';
 import '../models/models.dart';
 import '../providers/app_provider.dart';
+import '../widgets/smartyat_logo.dart';
 import 'manager_home.dart';
 import 'crew_home.dart';
 
@@ -50,9 +52,10 @@ class _ForcePinChangeScreenState extends State<ForcePinChangeScreen> {
   }
 
   void _tryChange() {
+    final l10n = AppLocalizations.of(context)!;
     if (_newPin == '0000') {
       setState(() {
-        _error = 'El nuevo PIN no puede ser 0000';
+        _error = l10n.pinNotZeros;
         _confirmPin = '';
         _newPin = '';
         _confirming = false;
@@ -61,7 +64,7 @@ class _ForcePinChangeScreenState extends State<ForcePinChangeScreen> {
     }
     if (_newPin != _confirmPin) {
       setState(() {
-        _error = 'Los PINs no coinciden. Inténtalo de nuevo.';
+        _error = l10n.pinNoMatch;
         _confirmPin = '';
         _newPin = '';
         _confirming = false;
@@ -84,6 +87,7 @@ class _ForcePinChangeScreenState extends State<ForcePinChangeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final current = _confirming ? _confirmPin : _newPin;
     return PopScope(
       canPop: false,
@@ -94,24 +98,25 @@ class _ForcePinChangeScreenState extends State<ForcePinChangeScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                const SmartYatLogo(width: 150),
+                const SizedBox(height: 32),
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: AppTheme.warningColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border:
-                        Border.all(color: AppTheme.warningColor.withOpacity(0.4)),
+                    color: AppTheme.statusWarnBg,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: AppTheme.statusWarn.withOpacity(0.4)),
                   ),
-                  child: const Row(
+                  child: Row(
                     children: [
-                      Icon(Icons.security,
-                          color: AppTheme.warningColor, size: 22),
-                      SizedBox(width: 12),
+                      const Icon(Icons.security,
+                          color: AppTheme.statusWarn, size: 22),
+                      const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          'Es tu primer acceso. Por seguridad, debes cambiar tu PIN.',
-                          style: TextStyle(
-                              color: AppTheme.warningColor, fontSize: 13),
+                          l10n.pinFirstAccess,
+                          style: const TextStyle(
+                              color: AppTheme.statusWarn, fontSize: 13),
                         ),
                       ),
                     ],
@@ -119,19 +124,17 @@ class _ForcePinChangeScreenState extends State<ForcePinChangeScreen> {
                 ),
                 const SizedBox(height: 40),
                 Text(
-                  _confirming
-                      ? 'CONFIRMA EL NUEVO PIN'
-                      : 'INTRODUCE EL NUEVO PIN',
-                  style: AppTheme.orbitron(size: 14),
+                  _confirming ? l10n.confirmNewPin : l10n.introduceNewPin,
+                  style: AppTheme.sectionLabel(size: 13),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 6),
                 Text(
                   _confirming
-                      ? 'Repite el PIN para confirmarlo'
-                      : 'El PIN debe tener exactamente 4 dígitos (no puede ser 0000)',
+                      ? l10n.pinRepeatToConfirm
+                      : l10n.pinMustBe4Digits,
                   style: const TextStyle(
-                      color: AppTheme.textSecondary, fontSize: 12),
+                      color: AppTheme.textSecondary, fontSize: 13),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 32),
@@ -147,7 +150,7 @@ class _ForcePinChangeScreenState extends State<ForcePinChangeScreen> {
                         shape: BoxShape.circle,
                         color: i < current.length
                             ? AppTheme.accent
-                            : AppTheme.dividerColor,
+                            : AppTheme.borderSubtle,
                         border: Border.all(
                           color: i < current.length
                               ? AppTheme.accent
@@ -162,7 +165,7 @@ class _ForcePinChangeScreenState extends State<ForcePinChangeScreen> {
                   Text(
                     _error!,
                     style: const TextStyle(
-                        color: AppTheme.errorColor, fontSize: 12),
+                        color: AppTheme.statusAlert, fontSize: 13),
                     textAlign: TextAlign.center,
                   ),
                 ],
@@ -225,9 +228,9 @@ class _PinKey extends StatelessWidget {
         height: 64,
         margin: const EdgeInsets.all(4),
         decoration: BoxDecoration(
-          color: AppTheme.panel,
+          color: AppTheme.surface01,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppTheme.dividerColor),
+          border: Border.all(color: AppTheme.borderSubtle),
         ),
         alignment: Alignment.center,
         child: child,

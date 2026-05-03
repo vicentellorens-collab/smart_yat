@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:smart_yat/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../config/theme.dart';
@@ -12,6 +13,7 @@ class MyTasksScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final p = context.watch<AppProvider>();
     final allTasks = p.tasks
         .where((t) => t.assignedToId == crewId)
@@ -44,11 +46,15 @@ class MyTasksScreen extends StatelessWidget {
         // Header
         Container(
           padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: AppTheme.panel,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-                color: AppTheme.accent.withValues(alpha: 0.3)),
+          decoration: const BoxDecoration(
+            color: AppTheme.surface01,
+            borderRadius: BorderRadius.all(Radius.circular(10)),
+            border: Border(
+              left: BorderSide(color: AppTheme.accent, width: 3),
+              top: BorderSide(color: AppTheme.borderSubtle, width: 1),
+              right: BorderSide(color: AppTheme.borderSubtle, width: 1),
+              bottom: BorderSide(color: AppTheme.borderSubtle, width: 1),
+            ),
           ),
           child: Row(
             children: [
@@ -58,13 +64,11 @@ class MyTasksScreen extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('HOY',
-                      style: AppTheme.orbitron(
-                          size: 12, color: AppTheme.accent)),
+                  Text('HOY', style: AppTheme.sectionLabel(size: 13, color: AppTheme.accent)),
                   Text(
                     '${active.length} tarea${active.length != 1 ? "s" : ""} pendiente${active.length != 1 ? "s" : ""}',
                     style: const TextStyle(
-                        color: AppTheme.textSecondary, fontSize: 12),
+                        color: AppTheme.textSecondary, fontSize: 13),
                   ),
                 ],
               ),
@@ -74,23 +78,23 @@ class MyTasksScreen extends StatelessWidget {
         const SizedBox(height: 20),
 
         if (active.isEmpty && done.isEmpty)
-          const Padding(
-            padding: EdgeInsets.only(top: 60),
+          Padding(
+            padding: const EdgeInsets.only(top: 60),
             child: EmptyState(
               icon: Icons.check_circle_outline,
-              message: 'No tienes tareas asignadas.\n¡Buen trabajo!',
+              message: l10n.noActiveTasks,
             ),
           ),
 
         if (active.isNotEmpty) ...[
-          SectionTitle('PENDIENTES (${active.length})'),
+          SectionTitle('${l10n.filterPending.toUpperCase()} (${active.length})'),
           const SizedBox(height: 10),
           ...active.map((t) => _ActiveTaskCard(task: t)),
           const SizedBox(height: 24),
         ],
 
         if (done.isNotEmpty) ...[
-          SectionTitle('HISTORIAL (${done.length})'),
+          SectionTitle('${l10n.taskHistory.toUpperCase()} (${done.length})'),
           const SizedBox(height: 10),
           ...done.map((t) => _DoneTaskCard(task: t)),
         ],
@@ -109,13 +113,18 @@ class _ActiveTaskCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.panel,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: task.priority == TaskPriority.alta
-              ? AppTheme.errorColor.withValues(alpha: 0.5)
-              : AppTheme.dividerColor,
-        ),
+        color: task.priority == TaskPriority.alta
+            ? AppTheme.statusAlertBg
+            : AppTheme.surface01,
+        borderRadius: BorderRadius.circular(10),
+        border: task.priority == TaskPriority.alta
+            ? const Border(
+                left: BorderSide(color: AppTheme.statusAlert, width: 3),
+                top: BorderSide(color: AppTheme.borderSubtle, width: 1),
+                right: BorderSide(color: AppTheme.borderSubtle, width: 1),
+                bottom: BorderSide(color: AppTheme.borderSubtle, width: 1),
+              )
+            : Border.all(color: AppTheme.borderSubtle),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -123,20 +132,14 @@ class _ActiveTaskCard extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: Text(task.title,
-                    style: const TextStyle(
-                        color: AppTheme.textPrimary,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 15)),
+                child: Text(task.title, style: AppTheme.cardTitle(size: 15)),
               ),
               PriorityBadge(task.priority),
             ],
           ),
           if (task.description.isNotEmpty) ...[
             const SizedBox(height: 6),
-            Text(task.description,
-                style: const TextStyle(
-                    color: AppTheme.textSecondary, fontSize: 13)),
+            Text(task.description, style: AppTheme.label(size: 13)),
           ],
           if (task.checklist.isNotEmpty) ...[
             const SizedBox(height: 12),
@@ -148,7 +151,7 @@ class _ActiveTaskCard extends StatelessWidget {
                   'Checklist (${task.checklist.where((i) => i.done).length}/${task.checklist.length})',
                   style: const TextStyle(
                       color: AppTheme.accent,
-                      fontSize: 12,
+                      fontSize: 13,
                       fontWeight: FontWeight.w500),
                 ),
               ],
@@ -168,7 +171,7 @@ class _ActiveTaskCard extends StatelessWidget {
                               ? Icons.check_box
                               : Icons.check_box_outline_blank,
                           color: item.done
-                              ? AppTheme.successColor
+                              ? AppTheme.accent
                               : AppTheme.textSecondary,
                           size: 18,
                         ),
@@ -199,10 +202,10 @@ class _ActiveTaskCard extends StatelessWidget {
                 child: OutlinedButton.icon(
                   onPressed: () => _reject(context, task),
                   icon: const Icon(Icons.close, size: 16),
-                  label: const Text('Rechazar'),
+                  label: Text(AppLocalizations.of(context)!.reject),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: AppTheme.errorColor,
-                    side: const BorderSide(color: AppTheme.errorColor),
+                    foregroundColor: AppTheme.statusAlert,
+                    side: const BorderSide(color: AppTheme.statusAlert),
                     padding: const EdgeInsets.symmetric(vertical: 10),
                   ),
                 ),
@@ -212,10 +215,8 @@ class _ActiveTaskCard extends StatelessWidget {
                 child: ElevatedButton.icon(
                   onPressed: () => _complete(context, task),
                   icon: const Icon(Icons.check, size: 16),
-                  label: const Text('Completar'),
+                  label: Text(AppLocalizations.of(context)!.markAsCompleted),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.successColor,
-                    foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 10),
                   ),
                 ),
@@ -228,11 +229,12 @@ class _ActiveTaskCard extends StatelessWidget {
   }
 
   void _complete(BuildContext context, Task task) {
+    final l10n = AppLocalizations.of(context)!;
     final ctrl = TextEditingController();
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: Text('Completar tarea', style: AppTheme.orbitron(size: 14)),
+        title: Text(l10n.markAsCompleted, style: AppTheme.sectionLabel(size: 13)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -244,9 +246,8 @@ class _ActiveTaskCard extends StatelessWidget {
             TextField(
               controller: ctrl,
               style: const TextStyle(color: AppTheme.textPrimary),
-              decoration: const InputDecoration(
-                labelText: 'Comentario de finalización (requerido)',
-                hintText: 'Ej: Tarea completada sin incidencias',
+              decoration: InputDecoration(
+                labelText: l10n.instructions,
               ),
               maxLines: 2,
             ),
@@ -255,31 +256,17 @@ class _ActiveTaskCard extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () {
               final comment = ctrl.text.trim();
-              if (comment.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('El comentario es obligatorio'),
-                    backgroundColor: AppTheme.warningColor,
-                  ),
-                );
-                return;
-              }
+              if (comment.isEmpty) return;
               context.read<AppProvider>().completeTask(task.id, comment);
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Tarea completada'),
-                  backgroundColor: AppTheme.successColor,
-                ),
-              );
             },
-            style: TextButton.styleFrom(foregroundColor: AppTheme.successColor),
-            child: const Text('Confirmar'),
+            style: TextButton.styleFrom(foregroundColor: AppTheme.accent),
+            child: Text(l10n.confirm),
           ),
         ],
       ),
@@ -287,11 +274,12 @@ class _ActiveTaskCard extends StatelessWidget {
   }
 
   void _reject(BuildContext context, Task task) {
+    final l10n = AppLocalizations.of(context)!;
     final ctrl = TextEditingController();
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: Text('Rechazar tarea', style: AppTheme.orbitron(size: 14)),
+        title: Text(l10n.reject, style: AppTheme.sectionLabel(size: 13)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -303,9 +291,8 @@ class _ActiveTaskCard extends StatelessWidget {
             TextField(
               controller: ctrl,
               style: const TextStyle(color: AppTheme.textPrimary),
-              decoration: const InputDecoration(
-                labelText: 'Motivo del rechazo (requerido)',
-                hintText: 'Ej: Falta material, no es mi área...',
+              decoration: InputDecoration(
+                labelText: l10n.rejectReason,
               ),
               maxLines: 2,
             ),
@@ -314,32 +301,18 @@ class _ActiveTaskCard extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () {
               final reason = ctrl.text.trim();
-              if (reason.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('El motivo es obligatorio'),
-                    backgroundColor: AppTheme.warningColor,
-                  ),
-                );
-                return;
-              }
+              if (reason.isEmpty) return;
               context.read<AppProvider>().rejectTask(task.id, reason);
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Tarea rechazada'),
-                  backgroundColor: AppTheme.errorColor,
-                ),
-              );
             },
             style:
-                TextButton.styleFrom(foregroundColor: AppTheme.errorColor),
-            child: const Text('Confirmar'),
+                TextButton.styleFrom(foregroundColor: AppTheme.statusAlert),
+            child: Text(l10n.confirm),
           ),
         ],
       ),
@@ -357,9 +330,18 @@ class _DoneTaskCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppTheme.panel.withValues(alpha: 0.6),
+        color: task.status == TaskStatus.rechazada
+            ? AppTheme.statusAlertBg
+            : AppTheme.surface01,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppTheme.dividerColor),
+        border: task.status == TaskStatus.rechazada
+            ? const Border(
+                left: BorderSide(color: AppTheme.statusAlert, width: 3),
+                top: BorderSide(color: AppTheme.borderSubtle, width: 1),
+                right: BorderSide(color: AppTheme.borderSubtle, width: 1),
+                bottom: BorderSide(color: AppTheme.borderSubtle, width: 1),
+              )
+            : Border.all(color: AppTheme.borderSubtle),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -371,21 +353,15 @@ class _DoneTaskCard extends StatelessWidget {
                     ? Icons.check_circle_outline
                     : Icons.cancel_outlined,
                 color: task.status == TaskStatus.completada
-                    ? AppTheme.successColor
-                    : AppTheme.errorColor,
+                    ? AppTheme.textSecondary
+                    : AppTheme.statusAlert,
                 size: 18,
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   task.title,
-                  style: TextStyle(
-                    color: AppTheme.textSecondary,
-                    fontSize: 13,
-                    decoration: task.status == TaskStatus.completada
-                        ? TextDecoration.lineThrough
-                        : null,
-                  ),
+                  style: AppTheme.label(size: 13),
                 ),
               ),
               TaskStatusChip(task.status),
@@ -396,8 +372,7 @@ class _DoneTaskCard extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               'Completada el ${DateFormat('dd/MM/yyyy \'a las\' HH:mm').format(task.completedAt!)}',
-              style: const TextStyle(
-                  color: AppTheme.successColor, fontSize: 10),
+              style: AppTheme.mono(size: 13, color: AppTheme.textSecondary),
             ),
           ],
           if (task.actionAt != null &&
@@ -406,7 +381,7 @@ class _DoneTaskCard extends StatelessWidget {
             Text(
               'Rechazada el ${DateFormat('dd/MM/yyyy \'a las\' HH:mm').format(task.actionAt!)}',
               style: const TextStyle(
-                  color: AppTheme.errorColor, fontSize: 10),
+                  color: AppTheme.statusAlert, fontSize: 13),
             ),
           ],
           if (task.completionComment != null && task.completionComment!.isNotEmpty) ...[
@@ -414,13 +389,12 @@ class _DoneTaskCard extends StatelessWidget {
             Row(
               children: [
                 const Icon(Icons.comment_outlined,
-                    color: AppTheme.successColor, size: 12),
+                    color: AppTheme.textSecondary, size: 13),
                 const SizedBox(width: 4),
                 Expanded(
                   child: Text(
                     task.completionComment!,
-                    style: const TextStyle(
-                        color: AppTheme.successColor, fontSize: 11),
+                    style: AppTheme.label(size: 13),
                   ),
                 ),
               ],
@@ -431,13 +405,13 @@ class _DoneTaskCard extends StatelessWidget {
             Row(
               children: [
                 const Icon(Icons.info_outline,
-                    color: AppTheme.errorColor, size: 12),
+                    color: AppTheme.statusAlert, size: 13),
                 const SizedBox(width: 4),
                 Expanded(
                   child: Text(
                     task.rejectionReason!,
                     style: const TextStyle(
-                        color: AppTheme.errorColor, fontSize: 11),
+                        color: AppTheme.statusAlert, fontSize: 13),
                   ),
                 ),
               ],

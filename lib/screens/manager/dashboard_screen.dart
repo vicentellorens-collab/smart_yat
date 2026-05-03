@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:smart_yat/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import '../../config/theme.dart';
 import '../../models/models.dart';
@@ -27,6 +28,7 @@ class DashboardScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = context.watch<AppProvider>();
     final user = p.currentUser;
+    final l10n = AppLocalizations.of(context)!;
 
     return RefreshIndicator(
       color: AppTheme.accent,
@@ -37,20 +39,7 @@ class DashboardScreen extends StatelessWidget {
           // Greeting
           Text(
             'Buen día, ${user?.name ?? 'Capitán'}',
-            style: AppTheme.orbitron(size: 14),
-          ),
-          const SizedBox(height: 4),
-          const Text(
-            'Estado del yate en tiempo real',
-            style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Pulsa un widget para ir al módulo',
-            style: TextStyle(
-                color: AppTheme.textSecondary,
-                fontSize: 11,
-                fontStyle: FontStyle.italic),
+            style: AppTheme.displayCondensed(size: 22),
           ),
           const SizedBox(height: 16),
 
@@ -64,50 +53,42 @@ class DashboardScreen extends StatelessWidget {
             childAspectRatio: 1.4,
             children: [
               StatCard(
-                label: 'Tareas Activas',
+                label: l10n.activeTasks,
                 value: '${p.activeTasks}',
                 icon: Icons.task_alt_outlined,
                 color: AppTheme.accent,
                 onTap: onActiveTasks,
               ),
               StatCard(
-                label: 'Tareas Rechazadas',
+                label: l10n.taskRejected,
                 value: '${p.rejectedTasks}',
                 icon: Icons.cancel_outlined,
-                color: p.rejectedTasks > 0
-                    ? AppTheme.errorColor
-                    : AppTheme.successColor,
+                color: p.rejectedTasks > 0 ? AppTheme.statusAlert : AppTheme.accent,
                 onTap: onRejectedTasks,
               ),
               StatCard(
-                label: 'Incidencias Abiertas',
+                label: l10n.openIncidents,
                 value: '${p.openIncidents}',
                 icon: Icons.warning_amber_outlined,
-                color: p.openIncidents > 0
-                    ? AppTheme.errorColor
-                    : AppTheme.successColor,
+                color: p.openIncidents > 0 ? AppTheme.statusAlert : AppTheme.accent,
                 onTap: onIncidents,
               ),
               StatCard(
-                label: 'Certs. con Alerta',
+                label: l10n.certificateAlerts,
                 value: '${p.alertCertificates}',
                 icon: Icons.verified_outlined,
-                color: p.alertCertificates > 0
-                    ? AppTheme.warningColor
-                    : AppTheme.successColor,
+                color: p.alertCertificates > 0 ? AppTheme.statusWarn : AppTheme.accent,
                 onTap: onCertificates,
               ),
               StatCard(
-                label: 'Stock Bajo/Agotado',
+                label: l10n.lowStock,
                 value: '${p.lowStockItems}',
                 icon: Icons.inventory_2_outlined,
-                color: p.lowStockItems > 0
-                    ? AppTheme.warningColor
-                    : AppTheme.successColor,
+                color: p.lowStockItems > 0 ? AppTheme.statusWarn : AppTheme.accent,
                 onTap: onLowStock,
               ),
               StatCard(
-                label: 'Docs Escaneados',
+                label: l10n.scanDocument,
                 value: '${p.scannedDocuments.length}',
                 icon: Icons.document_scanner_outlined,
                 color: AppTheme.accent,
@@ -122,11 +103,11 @@ class DashboardScreen extends StatelessWidget {
               .where((i) => i.status == IncidentStatus.abierta)
               .isNotEmpty) ...[
             SectionTitle(
-              'INCIDENCIAS ACTIVAS',
+              l10n.activeIncidents,
               trailing: TextButton(
                 onPressed: onIncidents,
-                child: const Text('Ver todas',
-                    style: TextStyle(color: AppTheme.accent, fontSize: 12)),
+                child: Text(l10n.viewAll,
+                    style: AppTheme.label(color: AppTheme.accent)),
               ),
             ),
             const SizedBox(height: 10),
@@ -144,11 +125,11 @@ class DashboardScreen extends StatelessWidget {
                   c.alertLevel == AlertLevel.expired)
               .isNotEmpty) ...[
             SectionTitle(
-              'CERTIFICADOS URGENTES',
+              l10n.urgentCertificates,
               trailing: TextButton(
                 onPressed: onCertificates,
-                child: const Text('Ver todos',
-                    style: TextStyle(color: AppTheme.accent, fontSize: 12)),
+                child: Text(l10n.viewAll,
+                    style: AppTheme.label(color: AppTheme.accent)),
               ),
             ),
             const SizedBox(height: 10),
@@ -165,11 +146,11 @@ class DashboardScreen extends StatelessWidget {
               .where((i) => i.status == InventoryStatus.sinStock)
               .isNotEmpty) ...[
             SectionTitle(
-              'SIN STOCK',
+              l10n.noStock,
               trailing: TextButton(
                 onPressed: onLowStock,
-                child: const Text('Ver todo',
-                    style: TextStyle(color: AppTheme.accent, fontSize: 12)),
+                child: Text(l10n.viewAll,
+                    style: AppTheme.label(color: AppTheme.accent)),
               ),
             ),
             const SizedBox(height: 10),
@@ -181,11 +162,11 @@ class DashboardScreen extends StatelessWidget {
 
           // Recent tasks
           SectionTitle(
-            'TAREAS RECIENTES',
+            l10n.recentTasks,
             trailing: TextButton(
               onPressed: onActiveTasks,
-              child: const Text('Ver todas',
-                  style: TextStyle(color: AppTheme.accent, fontSize: 12)),
+              child: Text(l10n.viewAll,
+                  style: AppTheme.label(color: AppTheme.accent)),
             ),
           ),
           const SizedBox(height: 10),
@@ -213,14 +194,19 @@ class _IncidentTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppTheme.panel,
+        color: AppTheme.statusAlertBg,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppTheme.errorColor.withOpacity(0.4)),
+        border: const Border(
+          left: BorderSide(color: AppTheme.statusAlert, width: 3),
+          top: BorderSide(color: AppTheme.borderSubtle, width: 1),
+          right: BorderSide(color: AppTheme.borderSubtle, width: 1),
+          bottom: BorderSide(color: AppTheme.borderSubtle, width: 1),
+        ),
       ),
       child: Row(
         children: [
-          Icon(Icons.warning_amber_rounded,
-              color: AppTheme.errorColor, size: 20),
+          const Icon(Icons.warning_amber_rounded,
+              color: AppTheme.statusAlert, size: 20),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -234,7 +220,7 @@ class _IncidentTile extends StatelessWidget {
                 if (inc.location != null)
                   Text(inc.location!,
                       style: const TextStyle(
-                          color: AppTheme.textSecondary, fontSize: 11)),
+                          color: AppTheme.textSecondary, fontSize: 13)),
               ],
             ),
           ),
@@ -255,14 +241,19 @@ class _CertAlert extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppTheme.panel,
+        color: AppTheme.statusWarnBg,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppTheme.warningColor.withOpacity(0.4)),
+        border: const Border(
+          left: BorderSide(color: AppTheme.statusWarn, width: 3),
+          top: BorderSide(color: AppTheme.borderSubtle, width: 1),
+          right: BorderSide(color: AppTheme.borderSubtle, width: 1),
+          bottom: BorderSide(color: AppTheme.borderSubtle, width: 1),
+        ),
       ),
       child: Row(
         children: [
           const Icon(Icons.verified_outlined,
-              color: AppTheme.warningColor, size: 20),
+              color: AppTheme.statusWarn, size: 20),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -277,7 +268,7 @@ class _CertAlert extends StatelessWidget {
                     cert.crewMemberName != null)
                   Text('Tripulante: ${cert.crewMemberName}',
                       style: const TextStyle(
-                          color: AppTheme.textSecondary, fontSize: 11)),
+                          color: AppTheme.textSecondary, fontSize: 13)),
               ],
             ),
           ),
@@ -298,14 +289,19 @@ class _StockAlert extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppTheme.panel,
+        color: AppTheme.statusAlertBg,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppTheme.errorColor.withOpacity(0.4)),
+        border: const Border(
+          left: BorderSide(color: AppTheme.statusAlert, width: 3),
+          top: BorderSide(color: AppTheme.borderSubtle, width: 1),
+          right: BorderSide(color: AppTheme.borderSubtle, width: 1),
+          bottom: BorderSide(color: AppTheme.borderSubtle, width: 1),
+        ),
       ),
       child: Row(
         children: [
           const Icon(Icons.inventory_2_outlined,
-              color: AppTheme.errorColor, size: 20),
+              color: AppTheme.statusAlert, size: 20),
           const SizedBox(width: 10),
           Expanded(
             child: Text(item.name,
@@ -331,9 +327,9 @@ class _TaskTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppTheme.panel,
+        color: AppTheme.surface01,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppTheme.dividerColor),
+        border: Border.all(color: AppTheme.borderSubtle),
       ),
       child: Row(
         children: [
@@ -342,14 +338,11 @@ class _TaskTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(task.title,
-                    style: const TextStyle(
-                        color: AppTheme.textPrimary,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 13)),
+                    style: AppTheme.cardTitle(size: 13)),
                 if (task.assignedToName != null)
                   Text(task.assignedToName!,
                       style: const TextStyle(
-                          color: AppTheme.textSecondary, fontSize: 11)),
+                          color: AppTheme.textSecondary, fontSize: 13)),
               ],
             ),
           ),

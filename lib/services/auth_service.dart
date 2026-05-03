@@ -3,7 +3,7 @@ import 'dart:math';
 
 class AuthService {
   static String hashPin(String pin) {
-    final input = pin + 'smartyat_salt_2024';
+    final input = pin + 'smartcrew_salt_2024';
     final bytes = utf8.encode(input);
     return base64.encode(bytes);
   }
@@ -21,4 +21,5 @@ class AuthService {
     return List.generate(32, (_) => chars[rng.nextInt(chars.length)]).join();
   }
 }
+
 

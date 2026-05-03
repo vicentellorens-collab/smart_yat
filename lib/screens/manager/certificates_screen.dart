@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:smart_yat/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
@@ -86,6 +87,7 @@ class _CertificatesScreenState extends State<CertificatesScreen>
   @override
   Widget build(BuildContext context) {
     final p = context.watch<AppProvider>();
+    final l10n = AppLocalizations.of(context)!;
     final barcoCerts = _filter(
         p.certificates.where((c) => c.certCategory == 'barco').toList());
     final tripulanteCerts = _filter(p.certificates
@@ -94,7 +96,7 @@ class _CertificatesScreenState extends State<CertificatesScreen>
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('CERTIFICADOS'),
+        title: Text(l10n.certificates.toUpperCase()),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(102),
           child: Column(
@@ -104,7 +106,7 @@ class _CertificatesScreenState extends State<CertificatesScreen>
                 child: TextField(
                   style: const TextStyle(color: AppTheme.textPrimary),
                   decoration: InputDecoration(
-                    hintText: 'Buscar certificado...',
+                    hintText: l10n.searchCertificates,
                     hintStyle: const TextStyle(
                         color: AppTheme.textSecondary),
                     prefixIcon: const Icon(Icons.search,
@@ -138,7 +140,7 @@ class _CertificatesScreenState extends State<CertificatesScreen>
                       children: [
                         const Icon(Icons.sailing, size: 16),
                         const SizedBox(width: 6),
-                        const Text('BARCO'),
+                        Text(l10n.yachtCertificates.toUpperCase()),
                         if (barcoCerts
                             .where((c) =>
                                 c.alertLevel != AlertLevel.none)
@@ -155,7 +157,7 @@ class _CertificatesScreenState extends State<CertificatesScreen>
                       children: [
                         const Icon(Icons.person_outline, size: 16),
                         const SizedBox(width: 6),
-                        const Text('TRIPULANTES'),
+                        Text(l10n.crewCertificates.toUpperCase()),
                         if (tripulanteCerts
                             .where((c) =>
                                 c.alertLevel != AlertLevel.none)
@@ -175,7 +177,7 @@ class _CertificatesScreenState extends State<CertificatesScreen>
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showCertDialog(context),
         icon: const Icon(Icons.add),
-        label: const Text('Añadir'),
+        label: Text(AppLocalizations.of(context)!.addCertificate),
       ),
       body: TabBarView(
         controller: _tabCtrl,
@@ -256,7 +258,7 @@ class _CertificatesScreenState extends State<CertificatesScreen>
                           existing == null
                               ? 'NUEVO CERTIFICADO'
                               : 'EDITAR CERTIFICADO',
-                          style: AppTheme.orbitron(size: 14)),
+                          style: AppTheme.sectionLabel(size: 13)),
                       const Spacer(),
                       IconButton(
                         onPressed: () => Navigator.pop(ctx),
@@ -269,9 +271,7 @@ class _CertificatesScreenState extends State<CertificatesScreen>
                   ),
                   const SizedBox(height: 16),
 
-                  Text('CATEGORÍA',
-                      style: AppTheme.orbitron(
-                          size: 11, color: AppTheme.textSecondary)),
+                  Text('CATEGORÍA', style: AppTheme.sectionLabel()),
                   const SizedBox(height: 8),
                   Row(
                     children: [
@@ -330,7 +330,7 @@ class _CertificatesScreenState extends State<CertificatesScreen>
                       labelText: 'Nombre del certificado *',
                       hintText: 'Buscar o escribir nombre del certificado...',
                       hintStyle: const TextStyle(
-                          color: AppTheme.textSecondary, fontSize: 12),
+                          color: AppTheme.textSecondary, fontSize: 13),
                       suffixIcon: Icon(
                         showNameSugg
                             ? Icons.arrow_drop_up
@@ -370,7 +370,7 @@ class _CertificatesScreenState extends State<CertificatesScreen>
                               decoration: BoxDecoration(
                                 border: Border(
                                     bottom: BorderSide(
-                                        color: AppTheme.dividerColor)),
+                                        color: AppTheme.borderSubtle)),
                               ),
                               child: Row(
                                 children: [
@@ -381,7 +381,7 @@ class _CertificatesScreenState extends State<CertificatesScreen>
                                   const Text('Cerrar sugerencias',
                                       style: TextStyle(
                                           color: AppTheme.textSecondary,
-                                          fontSize: 11)),
+                                          fontSize: 13)),
                                 ],
                               ),
                             ),
@@ -460,7 +460,7 @@ class _CertificatesScreenState extends State<CertificatesScreen>
                         color: AppTheme.background,
                         borderRadius: BorderRadius.circular(8),
                         border:
-                            Border.all(color: AppTheme.dividerColor),
+                            Border.all(color: AppTheme.borderSubtle),
                       ),
                       child: Row(
                         children: [
@@ -477,9 +477,7 @@ class _CertificatesScreenState extends State<CertificatesScreen>
 
                   // BUG-005: Attachment section
                   const SizedBox(height: 16),
-                  Text('ARCHIVO ADJUNTO',
-                      style: AppTheme.orbitron(
-                          size: 11, color: AppTheme.textSecondary)),
+                  Text('ARCHIVO ADJUNTO', style: AppTheme.sectionLabel()),
                   const SizedBox(height: 8),
                   Row(
                     children: [
@@ -545,24 +543,20 @@ class _CertificatesScreenState extends State<CertificatesScreen>
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color:
-                            AppTheme.successColor.withValues(alpha: 0.08),
+                        color: AppTheme.accentDim,
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
-                            color: AppTheme.successColor
-                                .withValues(alpha: 0.3)),
+                            color: AppTheme.accent.withOpacity(0.3)),
                       ),
                       child: Row(
                         children: [
                           const Icon(Icons.check_circle_outline,
-                              color: AppTheme.successColor, size: 16),
+                              color: AppTheme.accent, size: 16),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               attachmentPath!.split('/').last.split('\\').last,
-                              style: const TextStyle(
-                                  color: AppTheme.successColor,
-                                  fontSize: 11),
+                              style: AppTheme.label(size: 13, color: AppTheme.accent),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -592,7 +586,7 @@ class _CertificatesScreenState extends State<CertificatesScreen>
                               content: Text(
                                   'Selecciona un tripulante'),
                               backgroundColor:
-                                  AppTheme.warningColor,
+                                  AppTheme.statusWarn,
                             ),
                           );
                           return;
@@ -659,7 +653,7 @@ class _AlertDot extends StatelessWidget {
       height: 8,
       decoration: const BoxDecoration(
         shape: BoxShape.circle,
-        color: AppTheme.warningColor,
+        color: AppTheme.statusWarn,
       ),
     );
   }
@@ -691,7 +685,7 @@ class _CatOption extends StatelessWidget {
             border: Border.all(
                 color: selected
                     ? AppTheme.accent
-                    : AppTheme.dividerColor),
+                    : AppTheme.borderSubtle),
           ),
           child: Column(
             children: [
@@ -706,7 +700,7 @@ class _CatOption extends StatelessWidget {
                       color: selected
                           ? AppTheme.accent
                           : AppTheme.textSecondary,
-                      fontSize: 12)),
+                      fontSize: 13)),
             ],
           ),
         ),
@@ -736,7 +730,7 @@ class _AttachButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppTheme.background,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppTheme.dividerColor),
+          border: Border.all(color: AppTheme.borderSubtle),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -746,7 +740,7 @@ class _AttachButton extends StatelessWidget {
             Text(label,
                 style: const TextStyle(
                     color: AppTheme.accent,
-                    fontSize: 11,
+                    fontSize: 13,
                     fontWeight: FontWeight.w500)),
           ],
         ),
@@ -766,15 +760,32 @@ class _CertCard extends StatelessWidget {
     required this.onDelete,
   });
 
-  Color get _borderColor {
+  Color get _accentColor {
     return switch (cert.alertLevel) {
-      AlertLevel.expired => AppTheme.errorColor,
-      AlertLevel.days15 => AppTheme.errorColor,
-      AlertLevel.days30 => AppTheme.warningColor,
-      AlertLevel.days60 => AppTheme.warningColor,
-      AlertLevel.days90 => AppTheme.warningColor,
-      AlertLevel.none => AppTheme.dividerColor,
+      AlertLevel.expired || AlertLevel.days15 => AppTheme.statusAlert,
+      AlertLevel.days30 || AlertLevel.days60 || AlertLevel.days90 => AppTheme.statusWarn,
+      AlertLevel.none => AppTheme.accent,
     };
+  }
+
+  Color get _bgColor {
+    return switch (cert.alertLevel) {
+      AlertLevel.expired || AlertLevel.days15 => AppTheme.statusAlertBg,
+      AlertLevel.days30 || AlertLevel.days60 || AlertLevel.days90 => AppTheme.statusWarnBg,
+      AlertLevel.none => AppTheme.surface01,
+    };
+  }
+
+  BoxBorder get _border {
+    if (cert.alertLevel == AlertLevel.none) {
+      return Border.all(color: AppTheme.borderSubtle);
+    }
+    return Border(
+      left: BorderSide(color: _accentColor, width: 3),
+      top: const BorderSide(color: AppTheme.borderSubtle, width: 1),
+      right: const BorderSide(color: AppTheme.borderSubtle, width: 1),
+      bottom: const BorderSide(color: AppTheme.borderSubtle, width: 1),
+    );
   }
 
   @override
@@ -786,11 +797,10 @@ class _CertCard extends StatelessWidget {
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 16),
         decoration: BoxDecoration(
-          color: AppTheme.errorColor.withOpacity(0.2),
-          borderRadius: BorderRadius.circular(12),
+          color: AppTheme.statusAlert.withOpacity(0.2),
+          borderRadius: BorderRadius.circular(10),
         ),
-        child:
-            const Icon(Icons.delete_outline, color: AppTheme.errorColor),
+        child: const Icon(Icons.delete_outline, color: AppTheme.statusAlert),
       ),
       onDismissed: (_) => onDelete(),
       child: GestureDetector(
@@ -798,62 +808,42 @@ class _CertCard extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: AppTheme.panel,
-            borderRadius: BorderRadius.circular(12),
-            border:
-                Border.all(color: _borderColor.withOpacity(0.5)),
+            color: _bgColor,
+            borderRadius: BorderRadius.circular(10),
+            border: _border,
           ),
           child: Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: _borderColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(Icons.verified_outlined,
-                    color: _borderColor, size: 22),
-              ),
+              Icon(Icons.verified_outlined, color: _accentColor, size: 22),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(cert.name,
-                        style: const TextStyle(
-                            color: AppTheme.textPrimary,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14)),
+                    Text(cert.name, style: AppTheme.cardTitle(size: 14)),
                     const SizedBox(height: 2),
                     Text('${cert.issuer} · ${cert.type}',
-                        style: const TextStyle(
-                            color: AppTheme.textSecondary,
-                            fontSize: 11)),
+                        style: AppTheme.label(size: 13)),
                     if (cert.certCategory == 'tripulante' &&
                         cert.crewMemberName != null) ...[
                       const SizedBox(height: 2),
                       Row(children: [
                         const Icon(Icons.person_outline,
-                            color: AppTheme.accent, size: 12),
+                            color: AppTheme.accent, size: 13),
                         const SizedBox(width: 4),
                         Text(cert.crewMemberName!,
-                            style: const TextStyle(
-                                color: AppTheme.accent,
-                                fontSize: 11)),
+                            style: AppTheme.label(size: 13, color: AppTheme.accent)),
                       ]),
                     ],
                     const SizedBox(height: 4),
                     Row(
                       children: [
                         Text('Vence: ${formatDate(cert.expiryDate)}',
-                            style: const TextStyle(
-                                color: AppTheme.textSecondary,
-                                fontSize: 11)),
-                        // BUG-005: Attachment indicator
+                            style: AppTheme.mono(size: 13, color: AppTheme.textSecondary)),
                         if (cert.attachmentPath != null) ...[
                           const SizedBox(width: 8),
                           const Icon(Icons.attach_file,
-                              color: AppTheme.accent, size: 12),
+                              color: AppTheme.accent, size: 13),
                         ],
                       ],
                     ),

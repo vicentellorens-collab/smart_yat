@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:smart_yat/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import '../../config/theme.dart';
 import '../../models/models.dart';
@@ -11,20 +12,21 @@ class IncidentsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = context.watch<AppProvider>();
+    final l10n = AppLocalizations.of(context)!;
     final open =
         p.incidents.where((i) => i.status != IncidentStatus.resuelta).toList();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('INCIDENCIAS')),
+      appBar: AppBar(title: Text(l10n.incidents.toUpperCase())),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showAddDialog(context),
         icon: const Icon(Icons.add),
-        label: const Text('Nueva'),
+        label: Text(l10n.newIncident),
       ),
       body: open.isEmpty
-          ? const EmptyState(
+          ? EmptyState(
               icon: Icons.check_circle_outline,
-              message: 'No hay incidencias abiertas')
+              message: l10n.openIncidents)
           : ListView.separated(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
               itemCount: open.length,
@@ -35,6 +37,7 @@ class IncidentsScreen extends StatelessWidget {
   }
 
   void _showAddDialog(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final titleCtrl = TextEditingController();
     final descCtrl = TextEditingController();
     final locCtrl = TextEditingController();
@@ -51,19 +54,19 @@ class IncidentsScreen extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('NUEVA INCIDENCIA', style: AppTheme.orbitron(size: 14)),
+              Text(l10n.newIncident.toUpperCase(), style: AppTheme.sectionLabel(size: 13)),
               const SizedBox(height: 16),
               TextField(
                 controller: titleCtrl,
                 style: const TextStyle(color: AppTheme.textPrimary),
-                decoration: const InputDecoration(labelText: 'Título'),
+                decoration: InputDecoration(labelText: l10n.taskTitle),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: descCtrl,
                 style: const TextStyle(color: AppTheme.textPrimary),
                 maxLines: 2,
-                decoration: const InputDecoration(labelText: 'Descripción'),
+                decoration: InputDecoration(labelText: l10n.taskDescription),
               ),
               const SizedBox(height: 12),
               TextField(
@@ -75,7 +78,7 @@ class IncidentsScreen extends StatelessWidget {
               const SizedBox(height: 12),
               Row(
                 children: [
-                  const Text('Prioridad:',
+                  Text('${l10n.priority}:',
                       style: TextStyle(
                           color: AppTheme.textSecondary, fontSize: 13)),
                   const SizedBox(width: 10),
@@ -93,12 +96,12 @@ class IncidentsScreen extends StatelessWidget {
                             border: Border.all(
                                 color: priority == p
                                     ? AppTheme.accent
-                                    : AppTheme.dividerColor),
+                                    : AppTheme.borderSubtle),
                           ),
                           child: Text(
                             p.name.toUpperCase(),
                             style: TextStyle(
-                                fontSize: 11,
+                                fontSize: 13,
                                 color: priority == p
                                     ? AppTheme.accent
                                     : AppTheme.textSecondary),
@@ -127,7 +130,7 @@ class IncidentsScreen extends StatelessWidget {
                         ));
                     Navigator.pop(ctx);
                   },
-                  child: const Text('CREAR'),
+                  child: Text(l10n.create.toUpperCase()),
                 ),
               ),
             ],
@@ -144,11 +147,12 @@ class _IncidentCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool isActive = incident.status != IncidentStatus.resuelta;
     final statusColor = switch (incident.status) {
-      IncidentStatus.abierta => AppTheme.errorColor,
+      IncidentStatus.abierta => AppTheme.statusAlert,
       IncidentStatus.asignada => AppTheme.accent,
-      IncidentStatus.enProgreso => AppTheme.warningColor,
-      IncidentStatus.resuelta => AppTheme.successColor,
+      IncidentStatus.enProgreso => AppTheme.statusWarn,
+      IncidentStatus.resuelta => AppTheme.textSecondary,
     };
     final statusLabel = switch (incident.status) {
       IncidentStatus.abierta => 'ABIERTA',
@@ -160,9 +164,16 @@ class _IncidentCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppTheme.panel,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: statusColor.withOpacity(0.4)),
+        color: isActive ? AppTheme.statusAlertBg : AppTheme.surface01,
+        borderRadius: BorderRadius.circular(10),
+        border: isActive
+            ? const Border(
+                left: BorderSide(color: AppTheme.statusAlert, width: 3),
+                top: BorderSide(color: AppTheme.borderSubtle, width: 1),
+                right: BorderSide(color: AppTheme.borderSubtle, width: 1),
+                bottom: BorderSide(color: AppTheme.borderSubtle, width: 1),
+              )
+            : Border.all(color: AppTheme.borderSubtle),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -172,24 +183,17 @@ class _IncidentCard extends StatelessWidget {
               Icon(Icons.warning_amber_rounded, color: statusColor, size: 18),
               const SizedBox(width: 8),
               Expanded(
-                child: Text(incident.title,
-                    style: const TextStyle(
-                        color: AppTheme.textPrimary,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14)),
+                child: Text(incident.title, style: AppTheme.cardTitle(size: 14)),
               ),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: statusColor.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(6),
+                  color: statusColor.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(3),
+                  border: Border.all(color: statusColor.withOpacity(0.5)),
                 ),
                 child: Text(statusLabel,
-                    style: TextStyle(
-                        color: statusColor,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold)),
+                    style: AppTheme.sectionLabel(size: 13, color: statusColor)),
               ),
             ],
           ),
@@ -197,7 +201,7 @@ class _IncidentCard extends StatelessWidget {
             const SizedBox(height: 6),
             Text(incident.description,
                 style: const TextStyle(
-                    color: AppTheme.textSecondary, fontSize: 12),
+                    color: AppTheme.textSecondary, fontSize: 13),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis),
           ],
@@ -209,16 +213,16 @@ class _IncidentCard extends StatelessWidget {
               if (incident.location != null)
                 Row(children: [
                   const Icon(Icons.location_on_outlined,
-                      color: AppTheme.textSecondary, size: 12),
+                      color: AppTheme.textSecondary, size: 13),
                   const SizedBox(width: 2),
                   Text(incident.location!,
                       style: const TextStyle(
-                          color: AppTheme.textSecondary, fontSize: 11)),
+                          color: AppTheme.textSecondary, fontSize: 13)),
                 ]),
               const Spacer(),
               Text('Por ${incident.reportedBy}',
                   style: const TextStyle(
-                      color: AppTheme.textSecondary, fontSize: 11)),
+                      color: AppTheme.textSecondary, fontSize: 13)),
             ],
           ),
           if (incident.assignedToName != null) ...[
@@ -231,7 +235,7 @@ class _IncidentCard extends StatelessWidget {
                   'Asignada a: ${incident.assignedToName}',
                   style: const TextStyle(
                       color: AppTheme.accent,
-                      fontSize: 12,
+                      fontSize: 13,
                       fontWeight: FontWeight.w500),
                 ),
               ],
@@ -248,9 +252,9 @@ class _IncidentCard extends StatelessWidget {
                       foregroundColor: AppTheme.accent,
                       side: const BorderSide(color: AppTheme.accent),
                       padding: const EdgeInsets.symmetric(vertical: 6),
-                      textStyle: const TextStyle(fontSize: 12),
+                      textStyle: AppTheme.label(),
                     ),
-                    child: const Text('Asignar a...'),
+                    child: Text(AppLocalizations.of(context)!.assignTo),
                   ),
                 ),
               if (incident.status == IncidentStatus.asignada) ...[
@@ -261,12 +265,12 @@ class _IncidentCard extends StatelessWidget {
                       context.read<AppProvider>().updateIncident(incident);
                     },
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: AppTheme.warningColor,
-                      side: const BorderSide(color: AppTheme.warningColor),
+                      foregroundColor: AppTheme.statusWarn,
+                      side: const BorderSide(color: AppTheme.statusWarn),
                       padding: const EdgeInsets.symmetric(vertical: 6),
-                      textStyle: const TextStyle(fontSize: 12),
+                      textStyle: AppTheme.label(),
                     ),
-                    child: const Text('En Progreso'),
+                    child: Text(AppLocalizations.of(context)!.inProgressIncident),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -277,12 +281,12 @@ class _IncidentCard extends StatelessWidget {
                       context.read<AppProvider>().updateIncident(incident);
                     },
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: AppTheme.successColor,
-                      side: const BorderSide(color: AppTheme.successColor),
+                      foregroundColor: AppTheme.accent,
+                      side: const BorderSide(color: AppTheme.accent),
                       padding: const EdgeInsets.symmetric(vertical: 6),
-                      textStyle: const TextStyle(fontSize: 12),
+                      textStyle: AppTheme.label(),
                     ),
-                    child: const Text('Resolver'),
+                    child: Text(AppLocalizations.of(context)!.resolve),
                   ),
                 ),
               ],
@@ -294,12 +298,12 @@ class _IncidentCard extends StatelessWidget {
                       context.read<AppProvider>().updateIncident(incident);
                     },
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: AppTheme.successColor,
-                      side: const BorderSide(color: AppTheme.successColor),
+                      foregroundColor: AppTheme.accent,
+                      side: const BorderSide(color: AppTheme.accent),
                       padding: const EdgeInsets.symmetric(vertical: 6),
-                      textStyle: const TextStyle(fontSize: 12),
+                      textStyle: AppTheme.label(),
                     ),
-                    child: const Text('Resolver'),
+                    child: Text(AppLocalizations.of(context)!.resolve),
                   ),
                 ),
             ],
@@ -324,7 +328,7 @@ class _IncidentCard extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('ASIGNAR INCIDENCIA', style: AppTheme.orbitron(size: 14)),
+              Text(AppLocalizations.of(context)!.assignTo.toUpperCase(), style: AppTheme.sectionLabel(size: 13)),
               const SizedBox(height: 4),
               Text(
                 incident.title,
@@ -336,7 +340,7 @@ class _IncidentCard extends StatelessWidget {
               DropdownButtonFormField<CrewMember>(
                 value: selectedCrew,
                 decoration:
-                    const InputDecoration(labelText: 'Asignar a tripulante'),
+                    InputDecoration(labelText: AppLocalizations.of(context)!.assignTo),
                 dropdownColor: AppTheme.panel,
                 items: crew
                     .map((c) => DropdownMenuItem(
@@ -352,7 +356,7 @@ class _IncidentCard extends StatelessWidget {
               Text(
                 'Se creará automáticamente una tarea urgente para el tripulante.',
                 style: const TextStyle(
-                    color: AppTheme.textSecondary, fontSize: 11),
+                    color: AppTheme.textSecondary, fontSize: 13),
               ),
               const SizedBox(height: 20),
               SizedBox(
@@ -381,7 +385,7 @@ class _IncidentCard extends StatelessWidget {
                           ));
                           Navigator.pop(ctx);
                         },
-                  child: const Text('ASIGNAR Y CREAR TAREA'),
+                  child: Text(AppLocalizations.of(context)!.assign.toUpperCase()),
                 ),
               ),
             ],

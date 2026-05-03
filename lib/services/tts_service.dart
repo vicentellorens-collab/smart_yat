@@ -6,10 +6,16 @@ class TtsService {
 
   Future<void> init() async {
     try {
-      await _tts.setLanguage('es-ES');
+      await _tts.setLanguage('en-US');
       await _tts.setSpeechRate(0.9);
       await _tts.setVolume(1.0);
       _initialized = true;
+    } catch (_) {}
+  }
+
+  Future<void> setLanguage(String bcp47Locale) async {
+    try {
+      await _tts.setLanguage(bcp47Locale);
     } catch (_) {}
   }
 

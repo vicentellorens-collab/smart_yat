@@ -14,7 +14,7 @@ class SectionTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Text(text, style: AppTheme.orbitron(size: 13)),
+        Text(text.toUpperCase(), style: AppTheme.sectionLabel()),
         const Spacer(),
         if (trailing != null) trailing!,
       ],
@@ -40,34 +40,39 @@ class StatCard extends StatelessWidget {
     this.onTap,
   });
 
+  bool get _hasStatus => color != AppTheme.accent;
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppTheme.panel,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withOpacity(0.4)),
+          color: _hasStatus
+              ? (color == AppTheme.statusAlert
+                  ? AppTheme.statusAlertBg
+                  : AppTheme.statusWarnBg)
+              : AppTheme.surface01,
+          borderRadius: BorderRadius.circular(10),
+          border: Border(
+            left: BorderSide(
+              color: _hasStatus ? color : AppTheme.borderSubtle,
+              width: _hasStatus ? 3 : 1,
+            ),
+            top: const BorderSide(color: AppTheme.borderSubtle, width: 1),
+            right: const BorderSide(color: AppTheme.borderSubtle, width: 1),
+            bottom: const BorderSide(color: AppTheme.borderSubtle, width: 1),
+          ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, color: color, size: 22),
+            Icon(icon, color: color, size: 20),
             const SizedBox(height: 8),
-            Text(
-              value,
-              style: AppTheme.orbitron(size: 22, color: color),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: const TextStyle(
-                color: AppTheme.textSecondary,
-                fontSize: 11,
-              ),
-            ),
+            Text(value, style: AppTheme.displayCondensed(size: 34, color: color)),
+            const SizedBox(height: 4),
+            Text(label, style: AppTheme.label(size: 13)),
           ],
         ),
       ),
@@ -84,22 +89,18 @@ class PriorityBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (label, color) = switch (priority) {
-      TaskPriority.alta => ('ALTA', AppTheme.errorColor),
-      TaskPriority.media => ('MEDIA', AppTheme.warningColor),
-      TaskPriority.baja => ('BAJA', AppTheme.textSecondary),
+      TaskPriority.alta  => ('ALTA',  AppTheme.statusAlert),
+      TaskPriority.media => ('MEDIA', AppTheme.statusWarn),
+      TaskPriority.baja  => ('BAJA',  AppTheme.textTertiary),
     };
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: color.withOpacity(0.6)),
+        color: color.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(3),
+        border: Border.all(color: color.withOpacity(0.5)),
       ),
-      child: Text(
-        label,
-        style: TextStyle(
-            color: color, fontSize: 10, fontWeight: FontWeight.bold),
-      ),
+      child: Text(label, style: AppTheme.sectionLabel(size: 13, color: color)),
     );
   }
 }
@@ -113,21 +114,19 @@ class TaskStatusChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (label, color) = switch (status) {
-      TaskStatus.pendiente => ('Pendiente', AppTheme.warningColor),
+      TaskStatus.pendiente  => ('Pendiente',   AppTheme.statusWarn),
       TaskStatus.enProgreso => ('En Progreso', AppTheme.accent),
-      TaskStatus.completada => ('Completada', AppTheme.successColor),
-      TaskStatus.rechazada => ('Rechazada', AppTheme.errorColor),
+      TaskStatus.completada => ('Completada',  AppTheme.textSecondary),
+      TaskStatus.rechazada  => ('Rechazada',   AppTheme.statusAlert),
     };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(20),
+        color: color.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(3),
+        border: Border.all(color: color.withOpacity(0.4)),
       ),
-      child: Text(
-        label,
-        style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600),
-      ),
+      child: Text(label, style: AppTheme.sectionLabel(size: 13, color: color)),
     );
   }
 }
@@ -141,28 +140,36 @@ class AlertBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (label, color) = switch (level) {
-      AlertLevel.expired => ('VENCIDO', AppTheme.errorColor),
-      AlertLevel.days15 => ('${days}d', AppTheme.errorColor),
-      AlertLevel.days30 => ('${days}d', AppTheme.warningColor),
-      AlertLevel.days60 => ('${days}d', AppTheme.warningColor),
-      AlertLevel.days90 => ('${days}d', AppTheme.warningColor),
-      AlertLevel.none => ('OK', AppTheme.successColor),
+    return switch (level) {
+      AlertLevel.none    => Text('OK', style: AppTheme.mono(size: 13,
+          color: AppTheme.textTertiary)),
+      AlertLevel.expired => _solidBadge('VENCIDO', AppTheme.statusAlert),
+      AlertLevel.days15  => _solidBadge('${days}d', AppTheme.statusAlert),
+      AlertLevel.days30  => _outlineBadge('${days}d', AppTheme.statusWarn),
+      AlertLevel.days60  => _outlineBadge('${days}d', AppTheme.statusWarn),
+      AlertLevel.days90  => _outlineBadge('${days}d', AppTheme.statusWarn),
     };
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color.withOpacity(0.5)),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-            color: color, fontSize: 11, fontWeight: FontWeight.bold),
-      ),
-    );
   }
+
+  Widget _solidBadge(String text, Color color) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+    decoration: BoxDecoration(
+      color: color,
+      borderRadius: BorderRadius.circular(3),
+    ),
+    child: Text(text, style: AppTheme.sectionLabel(size: 13,
+        color: AppTheme.textInverse)),
+  );
+
+  Widget _outlineBadge(String text, Color color) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+    decoration: BoxDecoration(
+      color: color.withOpacity(0.12),
+      borderRadius: BorderRadius.circular(3),
+      border: Border.all(color: color.withOpacity(0.5)),
+    ),
+    child: Text(text, style: AppTheme.sectionLabel(size: 13, color: color)),
+  );
 }
 
 // ==================== INVENTORY STATUS BADGE ====================
@@ -173,24 +180,29 @@ class InventoryBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (label, color) = switch (status) {
-      InventoryStatus.ok => ('OK', AppTheme.successColor),
-      InventoryStatus.bajo => ('BAJO', AppTheme.warningColor),
-      InventoryStatus.sinStock => ('SIN STOCK', AppTheme.errorColor),
+    return switch (status) {
+      InventoryStatus.ok => Text('OK', style: AppTheme.mono(size: 13,
+          color: AppTheme.textTertiary)),
+      InventoryStatus.bajo => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+        decoration: BoxDecoration(
+          color: AppTheme.statusWarnBg,
+          borderRadius: BorderRadius.circular(3),
+          border: Border.all(color: AppTheme.statusWarn.withOpacity(0.5)),
+        ),
+        child: Text('BAJO', style: AppTheme.sectionLabel(size: 13,
+            color: AppTheme.statusWarn)),
+      ),
+      InventoryStatus.sinStock => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+        decoration: BoxDecoration(
+          color: AppTheme.statusAlert,
+          borderRadius: BorderRadius.circular(3),
+        ),
+        child: Text('SIN STOCK', style: AppTheme.sectionLabel(size: 13,
+            color: AppTheme.textInverse)),
+      ),
     };
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: color.withOpacity(0.5)),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-            color: color, fontSize: 10, fontWeight: FontWeight.bold),
-      ),
-    );
   }
 }
 
@@ -203,12 +215,12 @@ class CategoryIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (icon, color) = switch (category) {
-      'INCIDENCIA' => (Icons.warning_amber_rounded, AppTheme.errorColor),
-      'INVENTARIO' => (Icons.inventory_2_outlined, AppTheme.warningColor),
+      'INCIDENCIA' => (Icons.warning_amber_rounded, AppTheme.statusAlert),
+      'INVENTARIO' => (Icons.inventory_2_outlined, AppTheme.statusWarn),
       'PREFERENCIA_OWNER' => (Icons.star_outline, const Color(0xFFa78bfa)),
       'EVENTO' => (Icons.event_outlined, AppTheme.accent),
       'CONSULTA' => (Icons.help_outline, AppTheme.textSecondary),
-      'TAREA' => (Icons.task_alt_outlined, AppTheme.successColor),
+      'TAREA' => (Icons.task_alt_outlined, AppTheme.accent),
       _ => (Icons.help_outline, AppTheme.textSecondary),
     };
     return Container(
@@ -255,13 +267,10 @@ class EmptyState extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 56, color: AppTheme.textSecondary.withOpacity(0.5)),
+          Icon(icon, size: 48, color: AppTheme.textTertiary.withOpacity(0.4)),
           const SizedBox(height: 12),
-          Text(
-            message,
-            style: const TextStyle(color: AppTheme.textSecondary, fontSize: 14),
-            textAlign: TextAlign.center,
-          ),
+          Text(message, style: AppTheme.label(size: 13,
+              color: AppTheme.textTertiary), textAlign: TextAlign.center),
         ],
       ),
     );

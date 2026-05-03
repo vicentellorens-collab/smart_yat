@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:smart_yat/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import '../config/theme.dart';
 import '../providers/app_provider.dart';
 import '../services/connectivity_service.dart';
+import '../services/language_service.dart';
 import 'login_screen.dart';
+import 'settings/language_screen.dart';
 import 'crew/my_tasks_screen.dart';
 import 'crew/hey_yat_screen.dart';
 
@@ -19,6 +22,7 @@ class _CrewHomeState extends State<CrewHome> {
 
   void _changeUser() {
     context.read<AppProvider>().logout();
+    context.read<LanguageService>().resetToDefault();
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => const LoginScreen()),
       (_) => false,
@@ -28,7 +32,7 @@ class _CrewHomeState extends State<CrewHome> {
   void _showUserMenu(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppTheme.panel,
+      backgroundColor: AppTheme.surface02,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
@@ -41,10 +45,23 @@ class _CrewHomeState extends State<CrewHome> {
               height: 4,
               margin: const EdgeInsets.symmetric(vertical: 12),
               decoration: BoxDecoration(
-                color: AppTheme.dividerColor,
+                color: AppTheme.borderSubtle,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
+            ListTile(
+              leading: const Icon(Icons.language, color: AppTheme.accent),
+              title: const Text('Language / Idioma',
+                  style: TextStyle(color: AppTheme.textPrimary)),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LanguageScreen()),
+                );
+              },
+            ),
+            const Divider(color: AppTheme.borderSubtle, height: 1),
             ListTile(
               leading: const Icon(Icons.switch_account, color: AppTheme.accent),
               title: const Text('Cambiar de usuario',
@@ -56,9 +73,9 @@ class _CrewHomeState extends State<CrewHome> {
             ),
             ListTile(
               leading:
-                  const Icon(Icons.logout, color: AppTheme.errorColor),
+                  const Icon(Icons.logout, color: AppTheme.statusAlert),
               title: const Text('Cerrar sesión',
-                  style: TextStyle(color: AppTheme.errorColor)),
+                  style: TextStyle(color: AppTheme.statusAlert)),
               onTap: () {
                 Navigator.pop(context);
                 _changeUser();
@@ -73,6 +90,7 @@ class _CrewHomeState extends State<CrewHome> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final user = context.watch<AppProvider>().currentUser;
     final isOnline = context.watch<ConnectivityService>().isOnline;
 
@@ -88,7 +106,7 @@ class _CrewHomeState extends State<CrewHome> {
           children: [
             CircleAvatar(
               radius: 16,
-              backgroundColor: AppTheme.accent.withValues(alpha: 0.2),
+              backgroundColor: AppTheme.accentDim,
               child: Text(
                 user?.name.isNotEmpty == true ? user!.name[0].toUpperCase() : 'T',
                 style: const TextStyle(
@@ -117,8 +135,8 @@ class _CrewHomeState extends State<CrewHome> {
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           color: isOnline
-                              ? const Color(0xFF10b981)
-                              : const Color(0xFFef4444),
+                              ? AppTheme.accent
+                              : AppTheme.statusAlert,
                         ),
                       ),
                       const SizedBox(width: 4),
@@ -126,9 +144,9 @@ class _CrewHomeState extends State<CrewHome> {
                         isOnline ? 'En línea' : 'Sin conexión',
                         style: TextStyle(
                           color: isOnline
-                              ? const Color(0xFF10b981)
-                              : const Color(0xFFef4444),
-                          fontSize: 10,
+                              ? AppTheme.accent
+                              : AppTheme.statusAlert,
+                          fontSize: 13,
                         ),
                       ),
                     ],
@@ -150,7 +168,7 @@ class _CrewHomeState extends State<CrewHome> {
         children: [
           if (!isOnline)
             Material(
-              color: const Color(0xFFef4444),
+              color: AppTheme.statusAlert,
               child: SafeArea(
                 top: false,
                 child: Container(
@@ -165,7 +183,7 @@ class _CrewHomeState extends State<CrewHome> {
                       Text('Sin conexión · Modo offline',
                           style: TextStyle(
                               color: Colors.white,
-                              fontSize: 12,
+                              fontSize: 13,
                               fontWeight: FontWeight.w600)),
                     ],
                   ),
@@ -175,28 +193,34 @@ class _CrewHomeState extends State<CrewHome> {
           Expanded(child: screens[_currentIndex]),
         ],
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _currentIndex,
-        onDestinationSelected: (i) => setState(() => _currentIndex = i),
-        destinations: [
-          NavigationDestination(
-            icon: Badge(
-              isLabelVisible: context
-                  .watch<AppProvider>()
-                  .getTasksForCrew(user?.id ?? '')
-                  .isNotEmpty,
-              label: Text(
-                '${context.watch<AppProvider>().getTasksForCrew(user?.id ?? '').length}',
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Divider(height: 1, thickness: 1, color: AppTheme.borderSubtle),
+          NavigationBar(
+            selectedIndex: _currentIndex,
+            onDestinationSelected: (i) => setState(() => _currentIndex = i),
+            destinations: [
+              NavigationDestination(
+                icon: Badge(
+                  isLabelVisible: context
+                      .watch<AppProvider>()
+                      .getTasksForCrew(user?.id ?? '')
+                      .isNotEmpty,
+                  label: Text(
+                    '${context.watch<AppProvider>().getTasksForCrew(user?.id ?? '').length}',
+                  ),
+                  child: const Icon(Icons.assignment_outlined),
+                ),
+                selectedIcon: const Icon(Icons.assignment),
+                label: l10n.myTasks,
               ),
-              child: const Icon(Icons.assignment_outlined),
-            ),
-            selectedIcon: const Icon(Icons.assignment),
-            label: 'Mis Tareas',
-          ),
-          const NavigationDestination(
-            icon: Icon(Icons.mic_outlined),
-            selectedIcon: Icon(Icons.mic),
-            label: 'Hey Yat',
+              NavigationDestination(
+                icon: const Icon(Icons.mic_outlined),
+                selectedIcon: const Icon(Icons.mic),
+                label: l10n.heyYat,
+              ),
+            ],
           ),
         ],
       ),

@@ -4,47 +4,49 @@ import '../config/api_config.dart';
 import '../models/models.dart';
 
 class AiService {
-  static const String _baseSystemPrompt = '''Eres el asistente inteligente del yate Smart Yat OS. Tu tarea es clasificar mensajes de voz de la tripulación y extraer información relevante.
+  static const String _baseSystemPrompt = '''You are the intelligent assistant for Smart Yat OS yacht management. Your task is to classify crew voice messages and extract relevant information. The message may be in ANY language (Spanish, English, French, Russian, Chinese, etc.).
 
-Clasifica SIEMPRE el mensaje en UNA de estas categorías:
-- INCIDENCIA: Problema técnico, avería, fallo en equipamiento del barco
-- INVENTARIO: Consumo, gasto o reposición de productos o materiales. Detecta cantidades y unidades.
-- CONSULTA_INVENTARIO: El usuario pide la lista de la compra, qué falta, qué hay que comprar, o qué está bajo de stock. Frases como "hazme la lista de la compra", "qué hay que comprar", "qué nos falta", "lista de compras".
-- EVENTO: Actividad planificada, comida especial, reunión, visita o celebración
-- CONSULTA: Pregunta sobre información existente en el sistema (que NO sea de inventario)
-- TAREA: Trabajo a realizar que no encaja en las categorías anteriores
+ALWAYS classify the message into ONE of these categories:
+- INCIDENCIA: Technical problem, breakdown, failure in boat equipment
+- INVENTARIO: Consumption, expense or restocking of products or materials. Detect quantities and units.
+- CONSULTA_INVENTARIO: User asks for the shopping list, what is missing, what needs to be bought, or what is low in stock.
+- EVENTO: Planned activity, special meal, meeting, visit or celebration
+- CONSULTA: Question about existing information in the system (NOT inventory)
+- TAREA: Work to be done that does not fit the other categories
 
-Responde ÚNICAMENTE con un objeto JSON válido (sin texto adicional antes ni después):
+Respond ONLY with a valid JSON object (no additional text before or after):
 {
   "categoria": "INCIDENCIA|INVENTARIO|CONSULTA_INVENTARIO|EVENTO|CONSULTA|TAREA",
   "prioridad": "alta|media|baja",
   "datos_extraidos": {},
-  "respuesta_usuario": "Mensaje corto de confirmación en español"
+  "respuesta_usuario": "Short confirmation message in the SAME language as the user's message",
+  "canonical_english": "Short neutral English description of what was reported (e.g. 'Used 2L of engine oil')",
+  "original_language": "ISO 639-1 code of the message language (en, es, fr, ru, zh, etc.)"
 }
 
-Campos por categoría:
+Fields by category:
 - INCIDENCIA: datos_extraidos = {"descripcion": "...", "ubicacion": "...", "urgencia": "alta|media|baja"}
-- INVENTARIO: datos_extraidos = {"item_name": "...", "quantity": <número o null>, "unit": "L|kg|uds|botellas|cajas|...", "action": "restar|sumar|alerta", "matched_inventory_id": null}
-  - "gasté", "he gastado", "usé", "se acabó", "consumí" → action = "restar"
-  - "compré", "llegaron", "repusimos", "añadir" → action = "sumar"
-  - "queda poco", "hay poco", "está bajo" → action = "alerta"
-  - Convierte texto a número: "dos" → 2, "cinco" → 5, "medio" → 0.5
-  - Convierte unidades: "litros" → "L", "kilos" → "kg", "unidades"/"unos" → "uds"
+- INVENTARIO: datos_extraidos = {"item_name": "...", "quantity": <number or null>, "unit": "L|kg|uds|botellas|cajas|...", "action": "restar|sumar|alerta", "matched_inventory_id": null}
+  - "gasté/used/j'ai utilisé/использовал/用了" → action = "restar"
+  - "compré/bought/acheté/купил/买了" → action = "sumar"
+  - "queda poco/low stock/peu de stock" → action = "alerta"
+  - Convert text to number: "dos/two/deux/два/两" → 2, "medio/half/demi" → 0.5
+  - Convert units: "litros/liters/litres" → "L", "kilos/kg" → "kg", "units/unidades" → "uds"
 - CONSULTA_INVENTARIO: datos_extraidos = {"consulta": "lista_compra"}
 - EVENTO: datos_extraidos = {"tipo_evento": "...", "detalle": "...", "cuando": "..."}
 - CONSULTA: datos_extraidos = {"sobre": "...", "pregunta_resumida": "..."}
 - TAREA: datos_extraidos = {"descripcion": "...", "urgencia": "alta|media|baja"}
 
-Prioridad alta: incidencias urgentes, stock crítico, eventos inmediatos.
-Prioridad media: mayoría de casos.
-Prioridad baja: información general, consultas.''';
+Priority alta: urgent incidents, critical stock, immediate events.
+Priority media: most cases.
+Priority baja: general information, queries.''';
 
   String _buildSystemPrompt(List<String>? inventoryItems) {
     if (inventoryItems == null || inventoryItems.isEmpty) {
       return _baseSystemPrompt;
     }
     final itemsList = inventoryItems.map((i) => '  - $i').join('\n');
-    return '$_baseSystemPrompt\n\nITEMS ACTUALES EN EL INVENTARIO DEL YATE:\n$itemsList\n\nSi el usuario menciona cualquiera de estos items o algo semánticamente relacionado, clasifica como INVENTARIO y usa el nombre exacto del item en datos_extraidos.item_name. Ejemplos: "he gastado 2 litros de aceite para el motor" → INVENTARIO (item_name: "Aceite de Motor", quantity: 2, unit: "L", action: "restar").';
+    return '$_baseSystemPrompt\n\nCURRENT YACHT INVENTORY ITEMS:\n$itemsList\n\nIf the user mentions any of these items or something semantically related, classify as INVENTARIO and use the exact item name in datos_extraidos.item_name.';
   }
 
   Future<AiClassificationResult> classify(String transcript,

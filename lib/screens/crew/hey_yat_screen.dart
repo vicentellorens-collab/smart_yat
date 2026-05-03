@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:smart_yat/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 import 'package:speech_to_text/speech_recognition_result.dart';
@@ -8,6 +9,7 @@ import '../../models/models.dart';
 import '../../providers/app_provider.dart';
 import '../../services/ai_service.dart';
 import '../../services/connectivity_service.dart';
+import '../../services/language_service.dart';
 import '../../widgets/common_widgets.dart';
 import '../../main.dart' show ttsService;
 
@@ -92,9 +94,8 @@ class _HeyYatScreenState extends State<HeyYatScreen>
         SnackBar(
           content: Text(
               '${pending.length} mensaje${pending.length != 1 ? "s" : ""} offline procesado${pending.length != 1 ? "s" : ""}'),
-          backgroundColor: AppTheme.successColor,
-        ),
-      );
+          ),
+        );
     }
   }
 
@@ -145,9 +146,11 @@ class _HeyYatScreenState extends State<HeyYatScreen>
       return;
     }
 
+    final speechLocale = context.read<LanguageService>().speechLocale
+        .replaceAll('-', '_');
     await _speech.listen(
       onResult: _onResult,
-      localeId: 'es_ES',
+      localeId: speechLocale,
       listenFor: const Duration(seconds: 15),
       pauseFor: const Duration(seconds: 3),
       listenOptions: SpeechListenOptions(partialResults: true),
@@ -182,6 +185,8 @@ class _HeyYatScreenState extends State<HeyYatScreen>
       );
       await context.read<AppProvider>().addPendingVoiceMessage(msg);
       if (_ttsEnabled) {
+        final speechLocale = context.read<LanguageService>().speechLocale;
+        await ttsService.setLanguage(speechLocale);
         await ttsService.speak('Guardado para procesar cuando haya conexión.');
       }
       setState(() {
@@ -223,6 +228,8 @@ class _HeyYatScreenState extends State<HeyYatScreen>
           _state = _HeyYatState.result;
         });
         if (_ttsEnabled) {
+          final speechLocale = context.read<LanguageService>().speechLocale;
+          await ttsService.setLanguage(speechLocale);
           await ttsService.speak(result.respuestaUsuario);
         }
       }
@@ -255,6 +262,8 @@ class _HeyYatScreenState extends State<HeyYatScreen>
     await provider.processVoiceCommand(cmd, _result!);
 
     if (_ttsEnabled) {
+      final speechLocale = context.read<LanguageService>().speechLocale;
+      await ttsService.setLanguage(speechLocale);
       await ttsService.speak('Guardado correctamente.');
     }
 
@@ -314,7 +323,7 @@ class _HeyYatScreenState extends State<HeyYatScreen>
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text('HEY YAT', style: AppTheme.orbitron(size: 20)),
+              Text(AppLocalizations.of(context)!.heyYat, style: AppTheme.displayCondensed(size: 22)),
               const SizedBox(width: 12),
               GestureDetector(
                 onTap: () => setState(() => _ttsEnabled = !_ttsEnabled),
@@ -322,13 +331,13 @@ class _HeyYatScreenState extends State<HeyYatScreen>
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: _ttsEnabled
-                        ? AppTheme.accent.withValues(alpha: 0.15)
-                        : AppTheme.panel,
+                        ? AppTheme.accentDim
+                        : AppTheme.surface01,
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
                       color: _ttsEnabled
                           ? AppTheme.accent
-                          : AppTheme.dividerColor,
+                          : AppTheme.borderSubtle,
                     ),
                   ),
                   child: Row(
@@ -344,12 +353,9 @@ class _HeyYatScreenState extends State<HeyYatScreen>
                       const SizedBox(width: 4),
                       Text(
                         _ttsEnabled ? 'VOZ ON' : 'VOZ OFF',
-                        style: TextStyle(
-                          color: _ttsEnabled
-                              ? AppTheme.accent
-                              : AppTheme.textSecondary,
-                          fontSize: 9,
-                          fontWeight: FontWeight.bold,
+                        style: AppTheme.label(
+                          color: _ttsEnabled ? AppTheme.accent : AppTheme.textSecondary,
+                          weight: FontWeight.w600,
                         ),
                       ),
                     ],
@@ -359,9 +365,9 @@ class _HeyYatScreenState extends State<HeyYatScreen>
             ],
           ),
           const SizedBox(height: 4),
-          const Text(
-            'Asistente de voz inteligente',
-            style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+          Text(
+            AppLocalizations.of(context)!.heyYatSubtitle,
+            style: AppTheme.label(),
           ),
 
           // Processing queue badge
@@ -375,19 +381,18 @@ class _HeyYatScreenState extends State<HeyYatScreen>
                 border: Border.all(
                     color: AppTheme.accent.withValues(alpha: 0.4)),
               ),
-              child: const Row(
+              child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  SizedBox(
+                  const SizedBox(
                     width: 12,
                     height: 12,
                     child: CircularProgressIndicator(
                         strokeWidth: 2, color: AppTheme.accent),
                   ),
-                  SizedBox(width: 8),
-                  Text('Procesando mensajes offline...',
-                      style: TextStyle(
-                          color: AppTheme.accent, fontSize: 11)),
+                  const SizedBox(width: 8),
+                  Text(AppLocalizations.of(context)!.heyYatProcessingOffline,
+                      style: AppTheme.label(color: AppTheme.accent)),
                 ],
               ),
             ),
@@ -396,21 +401,20 @@ class _HeyYatScreenState extends State<HeyYatScreen>
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: AppTheme.warningColor.withValues(alpha: 0.15),
+                color: AppTheme.statusWarn.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                    color: AppTheme.warningColor.withValues(alpha: 0.4)),
+                    color: AppTheme.statusWarn.withValues(alpha: 0.4)),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const Icon(Icons.cloud_off,
-                      color: AppTheme.warningColor, size: 14),
+                      color: AppTheme.statusWarn, size: 14),
                   const SizedBox(width: 6),
                   Text(
-                    '$pendingCount mensaje${pendingCount != 1 ? "s" : ""} en cola',
-                    style: const TextStyle(
-                        color: AppTheme.warningColor, fontSize: 11),
+                    AppLocalizations.of(context)!.heyYatPendingMessages(pendingCount),
+                    style: AppTheme.label(color: AppTheme.statusWarn),
                   ),
                 ],
               ),
@@ -429,20 +433,19 @@ class _HeyYatScreenState extends State<HeyYatScreen>
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: AppTheme.errorColor.withValues(alpha: 0.1),
+                color: AppTheme.statusAlert.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                    color: AppTheme.errorColor.withValues(alpha: 0.4)),
+                    color: AppTheme.statusAlert.withValues(alpha: 0.4)),
               ),
               child: Row(
                 children: [
                   const Icon(Icons.error_outline,
-                      color: AppTheme.errorColor, size: 16),
+                      color: AppTheme.statusAlert, size: 16),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(_errorMsg!,
-                        style: const TextStyle(
-                            color: AppTheme.errorColor, fontSize: 12)),
+                        style: AppTheme.label(color: AppTheme.statusAlert)),
                   ),
                 ],
               ),
@@ -461,9 +464,9 @@ class _HeyYatScreenState extends State<HeyYatScreen>
                   size: 16),
               label: Text(
                   _showManualInput
-                      ? 'Ocultar teclado'
-                      : 'Escribir manualmente',
-                  style: const TextStyle(fontSize: 12)),
+                      ? AppLocalizations.of(context)!.heyYatHideKeyboard
+                      : AppLocalizations.of(context)!.heyYatTypeManually,
+                  style: AppTheme.label(color: AppTheme.textSecondary)),
               style: TextButton.styleFrom(
                   foregroundColor: AppTheme.textSecondary),
             ),
@@ -533,8 +536,8 @@ class _HeyYatScreenState extends State<HeyYatScreen>
           _speechAvailable
               ? 'Pulsa y habla'
               : 'Micrófono no disponible',
-          style: AppTheme.orbitron(
-              size: 13,
+          style: AppTheme.cardTitle(
+              size: 14,
               color: _speechAvailable
                   ? AppTheme.textPrimary
                   : AppTheme.textSecondary),
@@ -544,7 +547,7 @@ class _HeyYatScreenState extends State<HeyYatScreen>
           '"el winch 3 vibra"  ·  "queda poca lejía"\n"al owner le gusta el sushi"',
           style: TextStyle(
               color: AppTheme.textSecondary,
-              fontSize: 11,
+              fontSize: 13,
               height: 1.6),
           textAlign: TextAlign.center,
         ),
@@ -564,32 +567,31 @@ class _HeyYatScreenState extends State<HeyYatScreen>
               height: 110,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: AppTheme.errorColor.withValues(alpha: 0.15),
-                border: Border.all(color: AppTheme.errorColor, width: 2),
+                color: AppTheme.statusAlert.withValues(alpha: 0.15),
+                border: Border.all(color: AppTheme.statusAlert, width: 2),
                 boxShadow: [
                   BoxShadow(
-                    color: AppTheme.errorColor.withValues(alpha: 0.3),
+                    color: AppTheme.statusAlert.withValues(alpha: 0.3),
                     blurRadius: 20,
                     spreadRadius: 4,
                   ),
                 ],
               ),
-              child: const Icon(Icons.mic, color: AppTheme.errorColor, size: 50),
+              child: const Icon(Icons.mic, color: AppTheme.statusAlert, size: 50),
             ),
           ),
         ),
         const SizedBox(height: 20),
-        Text('ESCUCHANDO...',
-            style: AppTheme.orbitron(
-                size: 13, color: AppTheme.errorColor)),
+        Text(AppLocalizations.of(context)!.heyYatListening,
+            style: AppTheme.sectionLabel(size: 13, color: AppTheme.statusAlert)),
         const SizedBox(height: 12),
         if (_transcript.isNotEmpty)
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: AppTheme.panel,
+              color: AppTheme.surface01,
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: AppTheme.dividerColor),
+              border: Border.all(color: AppTheme.borderSubtle),
             ),
             child: Text(
               _transcript,
@@ -599,8 +601,8 @@ class _HeyYatScreenState extends State<HeyYatScreen>
             ),
           )
         else
-          const Text('Habla ahora...',
-              style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+          Text(AppLocalizations.of(context)!.heyYatSpeakNow,
+              style: AppTheme.label()),
         const SizedBox(height: 12),
         TextButton(
           onPressed: _stopListening,
@@ -628,15 +630,15 @@ class _HeyYatScreenState extends State<HeyYatScreen>
           ),
         ),
         const SizedBox(height: 20),
-        Text('CLASIFICANDO...',
-            style: AppTheme.orbitron(size: 13, color: AppTheme.accent)),
+        Text(AppLocalizations.of(context)!.heyYatClassifying,
+            style: AppTheme.sectionLabel(size: 13, color: AppTheme.accent)),
         const SizedBox(height: 12),
         Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: AppTheme.panel,
+            color: AppTheme.surface01,
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: AppTheme.dividerColor),
+            border: Border.all(color: AppTheme.borderSubtle),
           ),
           child: Text('"$_transcript"',
               style: const TextStyle(
@@ -660,19 +662,14 @@ class _HeyYatScreenState extends State<HeyYatScreen>
             width: double.infinity,
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: AppTheme.panel,
+              color: AppTheme.surface01,
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: AppTheme.dividerColor),
+              border: Border.all(color: AppTheme.borderSubtle),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('TRANSCRIPCIÓN',
-                    style: TextStyle(
-                        color: AppTheme.textSecondary,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1)),
+                Text('TRANSCRIPCIÓN', style: AppTheme.sectionLabel()),
                 const SizedBox(height: 6),
                 Text('"$_transcript"',
                     style: const TextStyle(
@@ -689,7 +686,7 @@ class _HeyYatScreenState extends State<HeyYatScreen>
             width: double.infinity,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AppTheme.panel,
+              color: AppTheme.surface01,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
                   color: AppTheme.accent.withValues(alpha: 0.4)),
@@ -706,13 +703,12 @@ class _HeyYatScreenState extends State<HeyYatScreen>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(r.categoria,
-                              style: AppTheme.orbitron(
-                                  size: 12, color: AppTheme.accent)),
+                              style: AppTheme.sectionLabel(size: 13, color: AppTheme.accent)),
                           Text(
                             'Prioridad: ${r.prioridad.toUpperCase()}',
                             style: const TextStyle(
                                 color: AppTheme.textSecondary,
-                                fontSize: 11),
+                                fontSize: 13),
                           ),
                         ],
                       ),
@@ -720,7 +716,7 @@ class _HeyYatScreenState extends State<HeyYatScreen>
                   ],
                 ),
                 const SizedBox(height: 14),
-                const Divider(color: AppTheme.dividerColor),
+                const Divider(color: AppTheme.borderSubtle),
                 const SizedBox(height: 10),
                 // Extracted data
                 ...r.datosExtraidos.entries
@@ -734,7 +730,7 @@ class _HeyYatScreenState extends State<HeyYatScreen>
                                 '${e.key}: ',
                                 style: const TextStyle(
                                     color: AppTheme.textSecondary,
-                                    fontSize: 12,
+                                    fontSize: 13,
                                     fontWeight: FontWeight.bold),
                               ),
                               Expanded(
@@ -742,7 +738,7 @@ class _HeyYatScreenState extends State<HeyYatScreen>
                                   '${e.value}',
                                   style: const TextStyle(
                                       color: AppTheme.textPrimary,
-                                      fontSize: 12),
+                                      fontSize: 13),
                                 ),
                               ),
                             ],
@@ -752,20 +748,18 @@ class _HeyYatScreenState extends State<HeyYatScreen>
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: AppTheme.successColor.withValues(alpha: 0.08),
+                    color: AppTheme.accentDim,
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                        color: AppTheme.successColor.withValues(alpha: 0.3)),
+                    border: Border.all(color: AppTheme.accent.withOpacity(0.3)),
                   ),
                   child: Row(
                     children: [
                       const Icon(Icons.check_circle_outline,
-                          color: AppTheme.successColor, size: 16),
+                          color: AppTheme.accent, size: 16),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(r.respuestaUsuario,
-                            style: const TextStyle(
-                                color: AppTheme.successColor, fontSize: 12)),
+                            style: AppTheme.label(size: 14, color: AppTheme.textPrimary)),
                       ),
                     ],
                   ),
@@ -782,10 +776,10 @@ class _HeyYatScreenState extends State<HeyYatScreen>
                 child: OutlinedButton.icon(
                   onPressed: _cancel,
                   icon: const Icon(Icons.close, size: 16),
-                  label: const Text('Cancelar'),
+                  label: Text(AppLocalizations.of(context)!.cancel),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppTheme.textSecondary,
-                    side: const BorderSide(color: AppTheme.dividerColor),
+                    side: const BorderSide(color: AppTheme.borderSubtle),
                     padding: const EdgeInsets.symmetric(vertical: 12),
                   ),
                 ),
@@ -796,7 +790,7 @@ class _HeyYatScreenState extends State<HeyYatScreen>
                 child: ElevatedButton.icon(
                   onPressed: _confirm,
                   icon: const Icon(Icons.save_outlined, size: 16),
-                  label: const Text('CONFIRMAR Y GUARDAR'),
+                  label: Text(AppLocalizations.of(context)!.heyYatConfirmed),
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 12),
                   ),
@@ -817,20 +811,17 @@ class _HeyYatScreenState extends State<HeyYatScreen>
           height: 90,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: AppTheme.successColor.withValues(alpha: 0.1),
-            border: Border.all(color: AppTheme.successColor, width: 2),
+            color: AppTheme.accentDim,
+            border: Border.all(color: AppTheme.accent, width: 2),
           ),
-          child: const Icon(Icons.check,
-              color: AppTheme.successColor, size: 44),
+          child: const Icon(Icons.check, color: AppTheme.accent, size: 44),
         ),
         const SizedBox(height: 20),
-        Text('REGISTRADO!',
-            style: AppTheme.orbitron(
-                size: 16, color: AppTheme.successColor)),
+        Text(AppLocalizations.of(context)!.heyYatConfirmed,
+            style: AppTheme.displayCondensed(size: 20, color: AppTheme.accent)),
         const SizedBox(height: 8),
-        const Text('Guardado en el sistema',
-            style:
-                TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+        Text(AppLocalizations.of(context)!.heyYatSavedInSystem,
+            style: AppTheme.label()),
       ],
     );
   }
@@ -840,18 +831,16 @@ class _HeyYatScreenState extends State<HeyYatScreen>
     if (commands.isEmpty) return const SizedBox.shrink();
 
     return Container(
-      decoration: const BoxDecoration(
-        color: AppTheme.panel,
-        border: Border(top: BorderSide(color: AppTheme.dividerColor)),
+      decoration: BoxDecoration(
+        color: AppTheme.surface01,
+        border: const Border(top: BorderSide(color: AppTheme.borderSubtle)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-            child: Text('RECIENTES',
-                style: AppTheme.orbitron(
-                    size: 10, color: AppTheme.textSecondary)),
+            child: Text('RECIENTES', style: AppTheme.sectionLabel()),
           ),
           SizedBox(
             height: 68,
@@ -869,9 +858,9 @@ class _HeyYatScreenState extends State<HeyYatScreen>
                     padding: const EdgeInsets.symmetric(
                         horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
-                      color: AppTheme.background,
+                      color: AppTheme.surface01,
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: AppTheme.dividerColor),
+                      border: Border.all(color: AppTheme.borderSubtle),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -888,14 +877,14 @@ class _HeyYatScreenState extends State<HeyYatScreen>
                               child: Text(cmd.category,
                                   style: const TextStyle(
                                       color: AppTheme.accent,
-                                      fontSize: 9,
+                                      fontSize: 13,
                                       fontWeight: FontWeight.bold)),
                             ),
                             const Spacer(),
                             Text(timeAgo(cmd.timestamp),
                                 style: const TextStyle(
                                     color: AppTheme.textSecondary,
-                                    fontSize: 9)),
+                                    fontSize: 13)),
                           ],
                         ),
                         const SizedBox(height: 4),
@@ -903,7 +892,7 @@ class _HeyYatScreenState extends State<HeyYatScreen>
                           cmd.transcript,
                           style: const TextStyle(
                               color: AppTheme.textSecondary,
-                              fontSize: 11),
+                              fontSize: 13),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),

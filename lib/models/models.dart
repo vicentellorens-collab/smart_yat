@@ -508,12 +508,16 @@ class AiClassificationResult {
   final String prioridad;
   final Map<String, dynamic> datosExtraidos;
   final String respuestaUsuario;
+  final String? canonicalEnglish;
+  final String? originalLanguage;
 
   AiClassificationResult({
     required this.categoria,
     required this.prioridad,
     required this.datosExtraidos,
     required this.respuestaUsuario,
+    this.canonicalEnglish,
+    this.originalLanguage,
   });
 
   factory AiClassificationResult.fromJson(Map<String, dynamic> json) =>
@@ -523,6 +527,8 @@ class AiClassificationResult {
         datosExtraidos:
             Map<String, dynamic>.from(json['datos_extraidos'] ?? {}),
         respuestaUsuario: json['respuesta_usuario'] ?? '',
+        canonicalEnglish: json['canonical_english'] as String?,
+        originalLanguage: json['original_language'] as String?,
       );
 }
 

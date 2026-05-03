@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:smart_yat/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
@@ -36,15 +37,15 @@ class _DocumentScanScreenState extends State<DocumentScanScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('DOCUMENTOS ESCANEADOS'),
+        title: Text(AppLocalizations.of(context)!.scanDocument.toUpperCase()),
         bottom: TabBar(
           controller: _tabCtrl,
           labelColor: AppTheme.accent,
           unselectedLabelColor: AppTheme.textSecondary,
           indicatorColor: AppTheme.accent,
-          tabs: const [
-            Tab(text: 'ESCANEAR'),
-            Tab(text: 'HISTORIAL'),
+          tabs: [
+            const Tab(text: 'ESCANEAR'),
+            Tab(text: AppLocalizations.of(context)!.taskHistory.toUpperCase()),
           ],
         ),
       ),
@@ -185,7 +186,7 @@ class _ScanTabState extends State<_ScanTab> {
       children: [
         // Image picker
         Text('IMÁGENES DEL DOCUMENTO',
-            style: AppTheme.orbitron(size: 11, color: AppTheme.textSecondary)),
+            style: AppTheme.sectionLabel()),
         const SizedBox(height: 12),
         if (_images.isNotEmpty)
           SizedBox(
@@ -218,7 +219,7 @@ class _ScanTabState extends State<_ScanTab> {
                         child: Container(
                           padding: const EdgeInsets.all(2),
                           decoration: const BoxDecoration(
-                            color: AppTheme.errorColor,
+                            color: AppTheme.statusAlert,
                             shape: BoxShape.circle,
                           ),
                           child: const Icon(Icons.close,
@@ -237,10 +238,10 @@ class _ScanTabState extends State<_ScanTab> {
             child: Container(
               height: 100,
               decoration: BoxDecoration(
-                color: AppTheme.panel,
+                color: AppTheme.surface01,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                    color: AppTheme.dividerColor, style: BorderStyle.solid),
+                    color: AppTheme.borderSubtle, style: BorderStyle.solid),
               ),
               child: const Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -250,7 +251,7 @@ class _ScanTabState extends State<_ScanTab> {
                   SizedBox(height: 8),
                   Text('Añadir imagen',
                       style: TextStyle(
-                          color: AppTheme.textSecondary, fontSize: 12)),
+                          color: AppTheme.textSecondary, fontSize: 13)),
                 ],
               ),
             ),
@@ -276,7 +277,7 @@ class _ScanTabState extends State<_ScanTab> {
           const SizedBox(height: 24),
           Text('DATOS DEL DOCUMENTO',
               style:
-                  AppTheme.orbitron(size: 11, color: AppTheme.textSecondary)),
+                  AppTheme.sectionLabel()),
           const SizedBox(height: 12),
 
           TextField(
@@ -303,7 +304,7 @@ class _ScanTabState extends State<_ScanTab> {
           // Status selector
           Text('ESTADO',
               style:
-                  AppTheme.orbitron(size: 10, color: AppTheme.textSecondary)),
+                  AppTheme.sectionLabel()),
           const SizedBox(height: 8),
           Wrap(
             spacing: 8,
@@ -312,13 +313,13 @@ class _ScanTabState extends State<_ScanTab> {
               Color color;
               switch (s) {
                 case 'Válido':
-                  color = AppTheme.successColor;
+                  color = AppTheme.accent;
                   break;
                 case 'Caducado':
-                  color = AppTheme.errorColor;
+                  color = AppTheme.statusAlert;
                   break;
                 default:
-                  color = AppTheme.warningColor;
+                  color = AppTheme.statusWarn;
               }
               return GestureDetector(
                 onTap: () => setState(() => _status = s),
@@ -328,16 +329,16 @@ class _ScanTabState extends State<_ScanTab> {
                   decoration: BoxDecoration(
                     color: selected
                         ? color.withValues(alpha: 0.2)
-                        : AppTheme.panel,
+                        : AppTheme.surface01,
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
-                      color: selected ? color : AppTheme.dividerColor,
+                      color: selected ? color : AppTheme.borderSubtle,
                     ),
                   ),
                   child: Text(s,
                       style: TextStyle(
                           color: selected ? color : AppTheme.textSecondary,
-                          fontSize: 12,
+                          fontSize: 13,
                           fontWeight: selected
                               ? FontWeight.bold
                               : FontWeight.normal)),
@@ -380,7 +381,7 @@ class _ScanTabState extends State<_ScanTab> {
             child: ElevatedButton.icon(
               onPressed: _save,
               icon: const Icon(Icons.save_outlined),
-              label: const Text('GUARDAR DOCUMENTO'),
+              label: Text(AppLocalizations.of(context)!.save.toUpperCase()),
             ),
           ),
           const SizedBox(height: 12),
@@ -443,9 +444,9 @@ class _AddImageButton extends StatelessWidget {
         width: 100,
         height: 100,
         decoration: BoxDecoration(
-          color: AppTheme.panel,
+          color: AppTheme.surface01,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppTheme.dividerColor),
+          border: Border.all(color: AppTheme.borderSubtle),
         ),
         child: const Icon(Icons.add, color: AppTheme.accent, size: 28),
       ),
@@ -473,7 +474,7 @@ class _DateField extends StatelessWidget {
             data: Theme.of(ctx).copyWith(
               colorScheme: const ColorScheme.dark(
                 primary: AppTheme.accent,
-                surface: AppTheme.panel,
+                surface: AppTheme.surface01,
               ),
             ),
             child: child!,
@@ -486,14 +487,14 @@ class _DateField extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppTheme.background,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppTheme.dividerColor),
+          border: Border.all(color: AppTheme.borderSubtle),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(label,
                 style: const TextStyle(
-                    color: AppTheme.textSecondary, fontSize: 11)),
+                    color: AppTheme.textSecondary, fontSize: 13)),
             const SizedBox(height: 4),
             Text(
               value != null
@@ -546,13 +547,13 @@ class _DocCard extends StatelessWidget {
     Color statusColor;
     switch (doc.status) {
       case 'Válido':
-        statusColor = AppTheme.successColor;
+        statusColor = AppTheme.accent;
         break;
       case 'Caducado':
-        statusColor = AppTheme.errorColor;
+        statusColor = AppTheme.statusAlert;
         break;
       default:
-        statusColor = AppTheme.warningColor;
+        statusColor = AppTheme.statusWarn;
     }
 
     return Dismissible(
@@ -562,19 +563,19 @@ class _DocCard extends StatelessWidget {
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 16),
         decoration: BoxDecoration(
-          color: AppTheme.errorColor.withValues(alpha: 0.2),
+          color: AppTheme.statusAlert.withValues(alpha: 0.2),
           borderRadius: BorderRadius.circular(12),
         ),
-        child: const Icon(Icons.delete_outline, color: AppTheme.errorColor),
+        child: const Icon(Icons.delete_outline, color: AppTheme.statusAlert),
       ),
       onDismissed: (_) =>
           context.read<AppProvider>().deleteScannedDocument(doc.id),
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: AppTheme.panel,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppTheme.dividerColor),
+          color: AppTheme.surface01,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: AppTheme.borderSubtle),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -585,32 +586,24 @@ class _DocCard extends StatelessWidget {
                     color: AppTheme.accent, size: 18),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: Text(doc.type,
-                      style: const TextStyle(
-                          color: AppTheme.textPrimary,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14)),
+                  child: Text(doc.type, style: AppTheme.cardTitle(size: 14)),
                 ),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(6),
+                    color: statusColor.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(3),
+                    border: Border.all(color: statusColor.withOpacity(0.5)),
                   ),
                   child: Text(doc.status,
-                      style: TextStyle(
-                          color: statusColor,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold)),
+                      style: AppTheme.sectionLabel(size: 13, color: statusColor)),
                 ),
               ],
             ),
             if (doc.description.isNotEmpty) ...[
               const SizedBox(height: 4),
               Text(doc.description,
-                  style: const TextStyle(
-                      color: AppTheme.textSecondary, fontSize: 12),
+                  style: AppTheme.label(size: 13),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis),
             ],
@@ -619,31 +612,28 @@ class _DocCard extends StatelessWidget {
               children: [
                 if (doc.holderName != null) ...[
                   const Icon(Icons.person_outline,
-                      color: AppTheme.textSecondary, size: 12),
+                      color: AppTheme.textSecondary, size: 13),
                   const SizedBox(width: 4),
-                  Text(doc.holderName!,
-                      style: const TextStyle(
-                          color: AppTheme.textSecondary, fontSize: 11)),
+                  Text(doc.holderName!, style: AppTheme.label(size: 13)),
                   const SizedBox(width: 12),
                 ],
                 if (doc.expiresAt != null) ...[
                   const Icon(Icons.event_outlined,
-                      color: AppTheme.textSecondary, size: 12),
+                      color: AppTheme.textSecondary, size: 13),
                   const SizedBox(width: 4),
                   Text(
                     'Caduca: ${DateFormat('dd/MM/yyyy').format(doc.expiresAt!)}',
-                    style: TextStyle(
+                    style: AppTheme.mono(
+                      size: 13,
                       color: doc.expiresAt!.isBefore(DateTime.now())
-                          ? AppTheme.errorColor
+                          ? AppTheme.statusAlert
                           : AppTheme.textSecondary,
-                      fontSize: 11,
                     ),
                   ),
                 ],
                 const Spacer(),
                 Text(timeAgo(doc.scannedAt),
-                    style: const TextStyle(
-                        color: AppTheme.textSecondary, fontSize: 10)),
+                    style: AppTheme.mono(size: 13, color: AppTheme.textSecondary)),
               ],
             ),
           ],

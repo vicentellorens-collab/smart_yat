@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:smart_yat/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import '../config/theme.dart';
 import '../models/models.dart';
 import '../providers/app_provider.dart';
 import '../services/connectivity_service.dart';
+import '../services/language_service.dart';
 import 'login_screen.dart';
+import 'settings/language_screen.dart';
 import 'manager/dashboard_screen.dart';
 import 'manager/tasks_screen.dart';
 import 'manager/crew_screen.dart';
@@ -47,6 +50,7 @@ class _ManagerHomeState extends State<ManagerHome> {
 
   void _switchProfile() {
     context.read<AppProvider>().logout();
+    context.read<LanguageService>().resetToDefault();
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => const LoginScreen()),
       (_) => false,
@@ -63,7 +67,7 @@ class _ManagerHomeState extends State<ManagerHome> {
   void _showMoreMenu(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppTheme.panel,
+      backgroundColor: AppTheme.surface02,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
@@ -76,7 +80,7 @@ class _ManagerHomeState extends State<ManagerHome> {
               height: 4,
               margin: const EdgeInsets.symmetric(vertical: 12),
               decoration: BoxDecoration(
-                color: AppTheme.dividerColor,
+                color: AppTheme.borderSubtle,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -93,7 +97,20 @@ class _ManagerHomeState extends State<ManagerHome> {
                 );
               },
             ),
-            const Divider(color: AppTheme.dividerColor, height: 1),
+            const Divider(color: AppTheme.borderSubtle, height: 1),
+            ListTile(
+              leading: const Icon(Icons.language, color: AppTheme.accent),
+              title: const Text('Language / Idioma',
+                  style: TextStyle(color: AppTheme.textPrimary)),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LanguageScreen()),
+                );
+              },
+            ),
+            const Divider(color: AppTheme.borderSubtle, height: 1),
             ListTile(
               leading:
                   const Icon(Icons.switch_account, color: AppTheme.accent),
@@ -106,12 +123,13 @@ class _ManagerHomeState extends State<ManagerHome> {
             ),
             ListTile(
               leading:
-                  const Icon(Icons.logout, color: AppTheme.errorColor),
+                  const Icon(Icons.logout, color: AppTheme.statusAlert),
               title: const Text('Cerrar sesión',
-                  style: TextStyle(color: AppTheme.errorColor)),
+                  style: TextStyle(color: AppTheme.statusAlert)),
               onTap: () {
                 Navigator.pop(context);
                 context.read<AppProvider>().logout();
+                context.read<LanguageService>().resetToDefault();
                 Navigator.of(context).pushAndRemoveUntil(
                   MaterialPageRoute(builder: (_) => const LoginScreen()),
                   (_) => false,
@@ -156,13 +174,14 @@ class _ManagerHomeState extends State<ManagerHome> {
     ];
 
     // AppBar titles per screen
-    const titles = [
-      'Dashboard',
-      'Tareas',
-      'Tripulación',
-      'Incidencias',
-      'Certificados',
-      'Inventario',
+    final l10n = AppLocalizations.of(context)!;
+    final titles = [
+      l10n.dashboard,
+      l10n.tasks,
+      l10n.crew,
+      l10n.incidents,
+      l10n.certificates,
+      l10n.inventory,
     ];
 
     return Scaffold(
@@ -177,17 +196,16 @@ class _ManagerHomeState extends State<ManagerHome> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFef4444).withValues(alpha: 0.15),
+                  color: AppTheme.statusAlert.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(4),
                 ),
-                child: const Row(
+                child: Row(
                   children: [
-                    Icon(Icons.wifi_off,
-                        color: Color(0xFFef4444), size: 12),
-                    SizedBox(width: 4),
+                    const Icon(Icons.wifi_off,
+                        color: AppTheme.statusAlert, size: 13),
+                    const SizedBox(width: 4),
                     Text('Offline',
-                        style: TextStyle(
-                            color: Color(0xFFef4444), fontSize: 11)),
+                        style: AppTheme.label(size: 13, color: AppTheme.statusAlert)),
                   ],
                 ),
               ),
@@ -211,7 +229,7 @@ class _ManagerHomeState extends State<ManagerHome> {
         children: [
           if (!isOnline)
             Material(
-              color: const Color(0xFFef4444),
+              color: AppTheme.statusAlert,
               child: SafeArea(
                 top: false,
                 child: Container(
@@ -226,7 +244,7 @@ class _ManagerHomeState extends State<ManagerHome> {
                       Text('Sin conexión · Modo offline',
                           style: TextStyle(
                               color: Colors.white,
-                              fontSize: 12,
+                              fontSize: 13,
                               fontWeight: FontWeight.w600)),
                     ],
                   ),
@@ -236,7 +254,11 @@ class _ManagerHomeState extends State<ManagerHome> {
           Expanded(child: screens[_currentIndex]),
         ],
       ),
-      bottomNavigationBar: NavigationBar(
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Divider(height: 1, thickness: 1, color: AppTheme.borderSubtle),
+          NavigationBar(
         selectedIndex: _currentIndex,
         onDestinationSelected: (i) => setState(() => _currentIndex = i),
         destinations: [
@@ -249,7 +271,7 @@ class _ManagerHomeState extends State<ManagerHome> {
               child: const Icon(Icons.dashboard_outlined),
             ),
             selectedIcon: const Icon(Icons.dashboard),
-            label: 'Dashboard',
+            label: l10n.dashboard,
           ),
           NavigationDestination(
             icon: Badge(
@@ -260,12 +282,12 @@ class _ManagerHomeState extends State<ManagerHome> {
               child: const Icon(Icons.task_alt_outlined),
             ),
             selectedIcon: const Icon(Icons.task_alt),
-            label: 'Tareas',
+            label: l10n.tasks,
           ),
-          const NavigationDestination(
-            icon: Icon(Icons.group_outlined),
-            selectedIcon: Icon(Icons.group),
-            label: 'Tripulación',
+          NavigationDestination(
+            icon: const Icon(Icons.group_outlined),
+            selectedIcon: const Icon(Icons.group),
+            label: l10n.crew,
           ),
           NavigationDestination(
             icon: Badge(
@@ -276,7 +298,7 @@ class _ManagerHomeState extends State<ManagerHome> {
               child: const Icon(Icons.warning_amber_outlined),
             ),
             selectedIcon: const Icon(Icons.warning_amber),
-            label: 'Incidencias',
+            label: l10n.incidents,
           ),
           NavigationDestination(
             icon: Badge(
@@ -287,7 +309,7 @@ class _ManagerHomeState extends State<ManagerHome> {
               child: const Icon(Icons.verified_outlined),
             ),
             selectedIcon: const Icon(Icons.verified),
-            label: 'Certificados',
+            label: l10n.certificates,
           ),
           NavigationDestination(
             icon: Badge(
@@ -298,8 +320,10 @@ class _ManagerHomeState extends State<ManagerHome> {
               child: const Icon(Icons.inventory_2_outlined),
             ),
             selectedIcon: const Icon(Icons.inventory_2),
-            label: 'Inventario',
+            label: l10n.inventory,
           ),
+        ],
+      ),
         ],
       ),
     );

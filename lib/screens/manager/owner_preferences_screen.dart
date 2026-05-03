@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:smart_yat/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import '../../config/theme.dart';
 import '../../models/models.dart';
@@ -51,14 +52,14 @@ class _OwnerPreferencesScreenState extends State<OwnerPreferencesScreen>
           labelColor: AppTheme.accent,
           unselectedLabelColor: AppTheme.textSecondary,
           indicatorColor: AppTheme.accent,
-          labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+          labelStyle: AppTheme.sectionLabel(size: 13),
           tabs: _tabs.map((t) => Tab(text: t.$2)).toList(),
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showAddDialog(context),
         icon: const Icon(Icons.add),
-        label: const Text('Añadir'),
+        label: Text(AppLocalizations.of(context)!.add),
       ),
       body: TabBarView(
         controller: _tabCtrl,
@@ -88,6 +89,7 @@ class _OwnerPreferencesScreenState extends State<OwnerPreferencesScreen>
   }
 
   void _showAddDialog(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     OwnerPreferenceType selectedType =
         _tabs[_tabCtrl.index].$1;
     bool isPositive = true;
@@ -105,7 +107,7 @@ class _OwnerPreferencesScreenState extends State<OwnerPreferencesScreen>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('NUEVA PREFERENCIA',
-                  style: AppTheme.orbitron(size: 14)),
+                  style: AppTheme.sectionLabel(size: 13)),
               const SizedBox(height: 16),
               // Type selector
               Wrap(
@@ -121,21 +123,19 @@ class _OwnerPreferencesScreenState extends State<OwnerPreferencesScreen>
                           horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
                         color: selected
-                            ? AppTheme.accent.withOpacity(0.2)
-                            : AppTheme.background,
-                        borderRadius: BorderRadius.circular(20),
+                            ? AppTheme.accent.withOpacity(0.12)
+                            : AppTheme.surface01,
+                        borderRadius: BorderRadius.circular(6),
                         border: Border.all(
                           color: selected
-                              ? AppTheme.accent
-                              : AppTheme.dividerColor,
+                              ? AppTheme.accent.withOpacity(0.5)
+                              : AppTheme.borderSubtle,
                         ),
                       ),
                       child: Text(t.$2,
-                          style: TextStyle(
-                              color: selected
-                                  ? AppTheme.accent
-                                  : AppTheme.textSecondary,
-                              fontSize: 12)),
+                          style: AppTheme.sectionLabel(
+                              size: 13,
+                              color: selected ? AppTheme.accent : AppTheme.textSecondary)),
                     ),
                   );
                 }).toList(),
@@ -151,14 +151,14 @@ class _OwnerPreferencesScreenState extends State<OwnerPreferencesScreen>
                   _ToggleBtn(
                     label: '👍 Le gusta',
                     selected: isPositive,
-                    color: AppTheme.successColor,
+                    color: AppTheme.accent,
                     onTap: () => setModalState(() => isPositive = true),
                   ),
                   const SizedBox(width: 8),
                   _ToggleBtn(
                     label: '👎 No le gusta',
                     selected: !isPositive,
-                    color: AppTheme.errorColor,
+                    color: AppTheme.statusAlert,
                     onTap: () => setModalState(() => isPositive = false),
                   ),
                 ],
@@ -190,7 +190,7 @@ class _OwnerPreferencesScreenState extends State<OwnerPreferencesScreen>
                         );
                     Navigator.pop(ctx);
                   },
-                  child: const Text('GUARDAR'),
+                  child: Text(l10n.save.toUpperCase()),
                 ),
               ),
             ],
@@ -216,23 +216,18 @@ class _PrefCard extends StatelessWidget {
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 16),
         decoration: BoxDecoration(
-          color: AppTheme.errorColor.withOpacity(0.2),
-          borderRadius: BorderRadius.circular(12),
+          color: AppTheme.statusAlert.withOpacity(0.2),
+          borderRadius: BorderRadius.circular(10),
         ),
-        child:
-            const Icon(Icons.delete_outline, color: AppTheme.errorColor),
+        child: const Icon(Icons.delete_outline, color: AppTheme.statusAlert),
       ),
       onDismissed: (_) => onDelete(),
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: AppTheme.panel,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: pref.isPositive
-                ? AppTheme.successColor.withOpacity(0.3)
-                : AppTheme.errorColor.withOpacity(0.3),
-          ),
+          color: AppTheme.surface01,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: AppTheme.borderSubtle),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -247,8 +242,8 @@ class _PrefCard extends StatelessWidget {
                       : Icons.thumb_down_outlined,
                   size: 14,
                   color: pref.isPositive
-                      ? AppTheme.successColor
-                      : AppTheme.errorColor,
+                      ? AppTheme.accent
+                      : AppTheme.statusAlert,
                 ),
               ],
             ),
@@ -261,11 +256,7 @@ class _PrefCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(
-                        child: Text(pref.detail,
-                            style: const TextStyle(
-                                color: AppTheme.textPrimary,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500)),
+                        child: Text(pref.detail, style: AppTheme.cardTitle(size: 13)),
                       ),
                       if (pref.viaHeyYat)
                         Container(
@@ -286,7 +277,7 @@ class _PrefCard extends StatelessWidget {
                                 'Hey Yat',
                                 style: TextStyle(
                                     color: AppTheme.accent,
-                                    fontSize: 8,
+                                    fontSize: 11,
                                     fontWeight: FontWeight.bold),
                               ),
                             ],
@@ -296,8 +287,7 @@ class _PrefCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(formatDate(pref.createdAt),
-                      style: const TextStyle(
-                          color: AppTheme.textSecondary, fontSize: 11)),
+                      style: AppTheme.mono(size: 13, color: AppTheme.textSecondary)),
                 ],
               ),
             ),
@@ -332,12 +322,12 @@ class _ToggleBtn extends StatelessWidget {
           color: selected ? color.withOpacity(0.2) : AppTheme.background,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-              color: selected ? color : AppTheme.dividerColor),
+              color: selected ? color : AppTheme.borderSubtle),
         ),
         child: Text(label,
             style: TextStyle(
                 color: selected ? color : AppTheme.textSecondary,
-                fontSize: 12)),
+                fontSize: 13)),
       ),
     );
   }

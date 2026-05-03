@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:smart_yat/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import '../../config/theme.dart';
 import '../../models/models.dart';
@@ -42,11 +43,11 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('INVENTARIO'),
+        title: Text(AppLocalizations.of(context)!.inventory.toUpperCase()),
         actions: [
           IconButton(
             icon: const Icon(Icons.shopping_cart_outlined),
-            tooltip: 'Lista de la compra',
+            tooltip: AppLocalizations.of(context)!.shoppingList,
             onPressed: () => _showShoppingList(context, p),
           ),
         ],
@@ -54,7 +55,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showItemDialog(context),
         icon: const Icon(Icons.add),
-        label: const Text('Añadir'),
+        label: Text(AppLocalizations.of(context)!.addItem),
       ),
       body: Column(
         children: [
@@ -66,27 +67,27 @@ class _InventoryScreenState extends State<InventoryScreen> {
                   const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               children: [
                 _FChip(
-                    label: 'Todo',
+                    label: AppLocalizations.of(context)!.filterAll,
                     selected: _filter == null,
                     onTap: () => setState(() => _filter = null)),
                 const SizedBox(width: 8),
                 _FChip(
-                    label: 'Sin Stock',
-                    color: AppTheme.errorColor,
+                    label: AppLocalizations.of(context)!.outOfStock,
+                    color: AppTheme.statusAlert,
                     selected: _filter == InventoryStatus.sinStock,
                     onTap: () =>
                         setState(() => _filter = InventoryStatus.sinStock)),
                 const SizedBox(width: 8),
                 _FChip(
-                    label: 'Stock Bajo',
-                    color: AppTheme.warningColor,
+                    label: AppLocalizations.of(context)!.lowStockAlert,
+                    color: AppTheme.statusWarn,
                     selected: _filter == InventoryStatus.bajo,
                     onTap: () =>
                         setState(() => _filter = InventoryStatus.bajo)),
                 const SizedBox(width: 8),
                 _FChip(
                     label: 'OK',
-                    color: AppTheme.successColor,
+                    color: AppTheme.accent,
                     selected: _filter == InventoryStatus.ok,
                     onTap: () =>
                         setState(() => _filter = InventoryStatus.ok)),
@@ -141,18 +142,18 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
                 child: Row(
                   children: [
-                    Text('LISTA DE LA COMPRA',
-                        style: AppTheme.orbitron(size: 14)),
+                    Text(AppLocalizations.of(context)!.shoppingList.toUpperCase(),
+                        style: AppTheme.sectionLabel(size: 13)),
                     const Spacer(),
                     Text(
                       '${checked.length}/${items.length} pedidos',
                       style: const TextStyle(
-                          color: AppTheme.textSecondary, fontSize: 12),
+                          color: AppTheme.textSecondary, fontSize: 13),
                     ),
                   ],
                 ),
               ),
-              const Divider(color: AppTheme.dividerColor),
+              const Divider(color: AppTheme.borderSubtle),
               if (items.isEmpty)
                 const Expanded(
                   child: EmptyState(
@@ -172,8 +173,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
                       final item = items[i];
                       final isChecked = checked.contains(item.id);
                       final color = item.status == InventoryStatus.sinStock
-                          ? AppTheme.errorColor
-                          : AppTheme.warningColor;
+                          ? AppTheme.statusAlert
+                          : AppTheme.statusWarn;
                       return GestureDetector(
                         onTap: () => setSheetState(() {
                           if (isChecked) {
@@ -186,12 +187,12 @@ class _InventoryScreenState extends State<InventoryScreen> {
                           padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
                             color: isChecked
-                                ? AppTheme.successColor.withOpacity(0.07)
-                                : AppTheme.panel,
-                            borderRadius: BorderRadius.circular(12),
+                                ? AppTheme.accentDim
+                                : AppTheme.surface01,
+                            borderRadius: BorderRadius.circular(10),
                             border: Border.all(
                               color: isChecked
-                                  ? AppTheme.successColor.withOpacity(0.3)
+                                  ? AppTheme.accent.withOpacity(0.3)
                                   : color.withOpacity(0.4),
                             ),
                           ),
@@ -202,7 +203,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                                     ? Icons.check_circle
                                     : Icons.circle_outlined,
                                 color: isChecked
-                                    ? AppTheme.successColor
+                                    ? AppTheme.accent
                                     : color,
                                 size: 22,
                               ),
@@ -229,7 +230,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                                       '${item.category}${item.location != null ? " · ${item.location}" : ""}',
                                       style: const TextStyle(
                                           color: AppTheme.textSecondary,
-                                          fontSize: 11),
+                                          fontSize: 13),
                                     ),
                                   ],
                                 ),
@@ -243,7 +244,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                                     '${item.quantity.toStringAsFixed(0)} / mín ${item.minLevel.toStringAsFixed(0)} ${item.unit}',
                                     style: const TextStyle(
                                         color: AppTheme.textSecondary,
-                                        fontSize: 10),
+                                        fontSize: 13),
                                   ),
                                 ],
                               ),
@@ -262,6 +263,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
   }
 
   void _showItemDialog(BuildContext context, [InventoryItem? existing]) {
+    final l10n = AppLocalizations.of(context)!;
     final nameCtrl = TextEditingController(text: existing?.name);
     final categoryCtrl =
         TextEditingController(text: existing?.category);
@@ -295,15 +297,15 @@ class _InventoryScreenState extends State<InventoryScreen> {
               children: [
                 Text(
                     existing == null
-                        ? 'NUEVO ARTÍCULO'
-                        : 'EDITAR ARTÍCULO',
-                    style: AppTheme.orbitron(size: 14)),
+                        ? l10n.addItem.toUpperCase()
+                        : l10n.edit.toUpperCase(),
+                    style: AppTheme.sectionLabel(size: 13)),
                 const SizedBox(height: 16),
                 TextField(
                   controller: nameCtrl,
                   style: const TextStyle(color: AppTheme.textPrimary),
                   decoration:
-                      const InputDecoration(labelText: 'Nombre'),
+                      InputDecoration(labelText: l10n.itemName),
                 ),
                 const SizedBox(height: 12),
                 Row(
@@ -326,7 +328,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                         style: const TextStyle(
                             color: AppTheme.textPrimary),
                         decoration:
-                            const InputDecoration(labelText: 'Unidad'),
+                            InputDecoration(labelText: l10n.unit),
                         items: _kUnits
                             .map((u) => DropdownMenuItem(
                                   value: u,
@@ -358,8 +360,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
                         style: const TextStyle(
                             color: AppTheme.textPrimary),
                         keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                            labelText: 'Cantidad actual'),
+                        decoration: InputDecoration(
+                            labelText: l10n.quantity),
                       ),
                     ),
                     const SizedBox(width: 10),
@@ -370,7 +372,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                             color: AppTheme.textPrimary),
                         keyboardType: TextInputType.number,
                         decoration:
-                            const InputDecoration(labelText: 'Mínimo'),
+                            InputDecoration(labelText: l10n.minimumLevel),
                       ),
                     ),
                   ],
@@ -437,7 +439,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                       Navigator.pop(ctx);
                     },
                     child: Text(
-                        existing == null ? 'AÑADIR' : 'GUARDAR'),
+                        existing == null ? l10n.add.toUpperCase() : l10n.save.toUpperCase()),
                   ),
                 ),
               ],
@@ -468,20 +470,15 @@ class _FChip extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         decoration: BoxDecoration(
-          color: selected ? c.withOpacity(0.2) : AppTheme.panel,
-          borderRadius: BorderRadius.circular(20),
+          color: selected ? c.withOpacity(0.12) : AppTheme.surface01,
+          borderRadius: BorderRadius.circular(6),
           border: Border.all(
-              color: selected ? c : AppTheme.dividerColor),
+              color: selected ? c.withOpacity(0.5) : AppTheme.borderSubtle),
         ),
         child: Text(label,
-            style: TextStyle(
-                color: selected ? c : AppTheme.textSecondary,
-                fontSize: 12,
-                fontWeight:
-                    selected ? FontWeight.bold : FontWeight.normal)),
+            style: AppTheme.sectionLabel(size: 13, color: selected ? c : AppTheme.textSecondary)),
       ),
     );
   }
@@ -500,10 +497,34 @@ class _ItemCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final statusColor = switch (item.status) {
-      InventoryStatus.ok => AppTheme.successColor,
-      InventoryStatus.bajo => AppTheme.warningColor,
-      InventoryStatus.sinStock => AppTheme.errorColor,
+    final (bgColor, border) = switch (item.status) {
+      InventoryStatus.sinStock => (
+          AppTheme.statusAlertBg,
+          const Border(
+            left: BorderSide(color: AppTheme.statusAlert, width: 3),
+            top: BorderSide(color: AppTheme.borderSubtle, width: 1),
+            right: BorderSide(color: AppTheme.borderSubtle, width: 1),
+            bottom: BorderSide(color: AppTheme.borderSubtle, width: 1),
+          ) as BoxBorder,
+        ),
+      InventoryStatus.bajo => (
+          AppTheme.statusWarnBg,
+          const Border(
+            left: BorderSide(color: AppTheme.statusWarn, width: 3),
+            top: BorderSide(color: AppTheme.borderSubtle, width: 1),
+            right: BorderSide(color: AppTheme.borderSubtle, width: 1),
+            bottom: BorderSide(color: AppTheme.borderSubtle, width: 1),
+          ) as BoxBorder,
+        ),
+      InventoryStatus.ok => (
+          AppTheme.surface01,
+          Border.all(color: AppTheme.borderSubtle) as BoxBorder,
+        ),
+    };
+    final qtyColor = switch (item.status) {
+      InventoryStatus.sinStock => AppTheme.statusAlert,
+      InventoryStatus.bajo => AppTheme.statusWarn,
+      InventoryStatus.ok => AppTheme.accent,
     };
 
     return Dismissible(
@@ -513,11 +534,10 @@ class _ItemCard extends StatelessWidget {
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 16),
         decoration: BoxDecoration(
-          color: AppTheme.errorColor.withOpacity(0.2),
-          borderRadius: BorderRadius.circular(12),
+          color: AppTheme.statusAlert.withOpacity(0.2),
+          borderRadius: BorderRadius.circular(10),
         ),
-        child:
-            const Icon(Icons.delete_outline, color: AppTheme.errorColor),
+        child: const Icon(Icons.delete_outline, color: AppTheme.statusAlert),
       ),
       onDismissed: (_) => onDelete(),
       child: GestureDetector(
@@ -525,50 +545,23 @@ class _ItemCard extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: AppTheme.panel,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-                color: item.status != InventoryStatus.ok
-                    ? statusColor.withOpacity(0.4)
-                    : AppTheme.dividerColor),
+            color: bgColor,
+            borderRadius: BorderRadius.circular(10),
+            border: border,
           ),
           child: Row(
             children: [
-              Container(
-                width: 4,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: statusColor,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(item.name,
-                        style: const TextStyle(
-                            color: AppTheme.textPrimary,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14)),
+                    Text(item.name, style: AppTheme.cardTitle(size: 14)),
                     const SizedBox(height: 3),
-                    Row(
-                      children: [
-                        Text(item.category,
-                            style: const TextStyle(
-                                color: AppTheme.textSecondary,
-                                fontSize: 11)),
-                        if (item.location != null) ...[
-                          const Text(' · ',
-                              style: TextStyle(
-                                  color: AppTheme.textSecondary)),
-                          Text(item.location!,
-                              style: const TextStyle(
-                                  color: AppTheme.textSecondary,
-                                  fontSize: 11)),
-                        ],
-                      ],
+                    Text(
+                      item.location != null
+                          ? '${item.category} · ${item.location}'
+                          : item.category,
+                      style: AppTheme.label(size: 13),
                     ),
                   ],
                 ),
@@ -578,16 +571,11 @@ class _ItemCard extends StatelessWidget {
                 children: [
                   Text(
                     '${item.quantity.toStringAsFixed(item.quantity == item.quantity.truncate() ? 0 : 1)} ${item.unit}',
-                    style: TextStyle(
-                        color: statusColor,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15),
+                    style: AppTheme.mono(size: 15, color: qtyColor, weight: FontWeight.w600),
                   ),
                   const SizedBox(height: 4),
                   Text('mín. ${item.minLevel} ${item.unit}',
-                      style: const TextStyle(
-                          color: AppTheme.textSecondary,
-                          fontSize: 10)),
+                      style: AppTheme.mono(size: 13, color: AppTheme.textSecondary)),
                   const SizedBox(height: 4),
                   InventoryBadge(item.status),
                 ],

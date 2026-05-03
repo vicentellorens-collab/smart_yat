@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:smart_yat/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../config/theme.dart';
@@ -47,6 +48,7 @@ class _TasksScreenState extends State<TasksScreen>
   @override
   Widget build(BuildContext context) {
     final p = context.watch<AppProvider>();
+    final l10n = AppLocalizations.of(context)!;
     final rejectedTasks =
         p.tasks.where((t) => t.status == TaskStatus.rechazada).toList();
 
@@ -104,19 +106,19 @@ class _TasksScreenState extends State<TasksScreen>
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('TAREAS'),
+        title: Text(l10n.tasks.toUpperCase()),
         bottom: TabBar(
           controller: _tabCtrl,
           labelColor: AppTheme.accent,
           unselectedLabelColor: AppTheme.textSecondary,
           indicatorColor: AppTheme.accent,
           tabs: [
-            const Tab(text: 'ACTIVAS'),
+            Tab(text: l10n.filterInProgress.toUpperCase()),
             Tab(
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text('RECHAZADAS'),
+                  Text(l10n.filterRejected.toUpperCase()),
                   if (rejectedTasks.isNotEmpty) ...[
                     const SizedBox(width: 6),
                     Container(
@@ -130,7 +132,7 @@ class _TasksScreenState extends State<TasksScreen>
                         '${rejectedTasks.length}',
                         style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 10,
+                            fontSize: 13,
                             fontWeight: FontWeight.bold),
                       ),
                     ),
@@ -138,14 +140,14 @@ class _TasksScreenState extends State<TasksScreen>
                 ],
               ),
             ),
-            const Tab(text: 'HISTORIAL'),
+            Tab(text: l10n.taskHistory.toUpperCase()),
           ],
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showTaskDialog(context),
         icon: const Icon(Icons.add),
-        label: const Text('Nueva'),
+        label: Text(l10n.newTask),
       ),
       body: TabBarView(
         controller: _tabCtrl,
@@ -161,24 +163,24 @@ class _TasksScreenState extends State<TasksScreen>
                       horizontal: 16, vertical: 8),
                   children: [
                     _FilterChip(
-                        label: 'Todas',
+                        label: l10n.filterAll,
                         selected: _filter == null,
                         onTap: () => setState(() => _filter = null)),
                     const SizedBox(width: 8),
                     _FilterChip(
-                        label: 'Pendientes',
+                        label: l10n.filterPending,
                         selected: _filter == TaskStatus.pendiente,
                         onTap: () => setState(
                             () => _filter = TaskStatus.pendiente)),
                     const SizedBox(width: 8),
                     _FilterChip(
-                        label: 'En Progreso',
+                        label: l10n.filterInProgress,
                         selected: _filter == TaskStatus.enProgreso,
                         onTap: () => setState(
                             () => _filter = TaskStatus.enProgreso)),
                     const SizedBox(width: 8),
                     _FilterChip(
-                        label: 'Completadas (48h)',
+                        label: l10n.filterCompleted,
                         selected: _filter == TaskStatus.completada,
                         onTap: () => setState(
                             () => _filter = TaskStatus.completada)),
@@ -187,9 +189,9 @@ class _TasksScreenState extends State<TasksScreen>
               ),
               Expanded(
                 child: activeTasks.isEmpty
-                    ? const EmptyState(
+                    ? EmptyState(
                         icon: Icons.task_alt_outlined,
-                        message: 'No hay tareas en esta categoría')
+                        message: l10n.noActiveTasks)
                     : ListView.separated(
                         padding:
                             const EdgeInsets.fromLTRB(16, 8, 16, 80),
@@ -205,9 +207,9 @@ class _TasksScreenState extends State<TasksScreen>
 
           // ── RECHAZADAS tab ──
           rejectedTasks.isEmpty
-              ? const EmptyState(
+              ? EmptyState(
                   icon: Icons.check_circle_outline,
-                  message: 'Sin tareas rechazadas')
+                  message: l10n.noRejectedTasks)
               : ListView.separated(
                   padding:
                       const EdgeInsets.fromLTRB(16, 16, 16, 80),
@@ -226,7 +228,7 @@ class _TasksScreenState extends State<TasksScreen>
                 child: TextField(
                   style: const TextStyle(color: AppTheme.textPrimary),
                   decoration: InputDecoration(
-                    hintText: 'Buscar en historial...',
+                    hintText: l10n.searchHistory,
                     hintStyle:
                         const TextStyle(color: AppTheme.textSecondary),
                     prefixIcon: const Icon(Icons.search,
@@ -256,19 +258,19 @@ class _TasksScreenState extends State<TasksScreen>
                       const EdgeInsets.symmetric(horizontal: 16),
                   children: [
                     _FilterChip(
-                        label: 'Todo',
+                        label: l10n.allTime,
                         selected: _historyDateFilter == 'all',
                         onTap: () => setState(
                             () => _historyDateFilter = 'all')),
                     const SizedBox(width: 8),
                     _FilterChip(
-                        label: 'Esta semana',
+                        label: l10n.thisWeek,
                         selected: _historyDateFilter == 'week',
                         onTap: () => setState(
                             () => _historyDateFilter = 'week')),
                     const SizedBox(width: 8),
                     _FilterChip(
-                        label: 'Este mes',
+                        label: l10n.thisMonth,
                         selected: _historyDateFilter == 'month',
                         onTap: () => setState(
                             () => _historyDateFilter = 'month')),
@@ -278,9 +280,9 @@ class _TasksScreenState extends State<TasksScreen>
               const SizedBox(height: 4),
               Expanded(
                 child: historyTasks.isEmpty
-                    ? const EmptyState(
+                    ? EmptyState(
                         icon: Icons.history,
-                        message: 'No hay tareas completadas')
+                        message: l10n.noCompletedTasks)
                     : ListView.separated(
                         padding:
                             const EdgeInsets.fromLTRB(16, 8, 16, 80),
@@ -299,6 +301,7 @@ class _TasksScreenState extends State<TasksScreen>
   }
 
   void _showTaskDialog(BuildContext context, [Task? existing]) {
+    final l10n = AppLocalizations.of(context)!;
     final titleCtrl =
         TextEditingController(text: existing?.title);
     final descCtrl =
@@ -324,15 +327,15 @@ class _TasksScreenState extends State<TasksScreen>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                  existing == null ? 'NUEVA TAREA' : 'EDITAR TAREA',
-                  style: AppTheme.orbitron(size: 14)),
+                  existing == null ? l10n.newTask.toUpperCase() : l10n.edit.toUpperCase(),
+                  style: AppTheme.sectionLabel(size: 13)),
               const SizedBox(height: 16),
               TextField(
                 controller: titleCtrl,
                 style: const TextStyle(
                     color: AppTheme.textPrimary),
                 decoration:
-                    const InputDecoration(labelText: 'Título'),
+                    InputDecoration(labelText: l10n.taskTitle),
               ),
               const SizedBox(height: 12),
               TextField(
@@ -341,13 +344,13 @@ class _TasksScreenState extends State<TasksScreen>
                     color: AppTheme.textPrimary),
                 maxLines: 2,
                 decoration:
-                    const InputDecoration(labelText: 'Descripción'),
+                    InputDecoration(labelText: l10n.taskDescription),
               ),
               const SizedBox(height: 12),
               Row(
                 children: [
-                  const Text('Prioridad:',
-                      style: TextStyle(
+                  Text('${l10n.priority}:',
+                      style: const TextStyle(
                           color: AppTheme.textSecondary,
                           fontSize: 13)),
                   const SizedBox(width: 10),
@@ -375,7 +378,7 @@ class _TasksScreenState extends State<TasksScreen>
                           child: Text(
                             p.name.toUpperCase(),
                             style: TextStyle(
-                                fontSize: 11,
+                                fontSize: 13,
                                 color: priority == p
                                     ? AppTheme.accent
                                     : AppTheme.textSecondary),
@@ -390,13 +393,12 @@ class _TasksScreenState extends State<TasksScreen>
                 dropdownColor: AppTheme.panel,
                 style: const TextStyle(
                     color: AppTheme.textPrimary),
-                decoration: const InputDecoration(
-                    labelText:
-                        'Asignar a tripulante (opcional)'),
+                decoration: InputDecoration(
+                    labelText: l10n.assignTo),
                 items: [
                   const DropdownMenuItem(
                       value: null,
-                      child: Text('Sin asignar')),
+                      child: Text('—')),
                   ...crew.map((c) => DropdownMenuItem(
                         value: c.id,
                         child: Text(c.name),
@@ -444,8 +446,8 @@ class _TasksScreenState extends State<TasksScreen>
                     Navigator.pop(ctx);
                   },
                   child: Text(existing == null
-                      ? 'CREAR TAREA'
-                      : 'GUARDAR'),
+                      ? l10n.create.toUpperCase()
+                      : l10n.save.toUpperCase()),
                 ),
               ),
             ],
@@ -473,24 +475,18 @@ class _FilterChip extends StatelessWidget {
         padding:
             const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         decoration: BoxDecoration(
-          color: selected
-              ? AppTheme.accent.withValues(alpha: 0.2)
-              : AppTheme.panel,
-          borderRadius: BorderRadius.circular(20),
+          color: selected ? AppTheme.accentDim : AppTheme.surface01,
+          borderRadius: BorderRadius.circular(6),
           border: Border.all(
-            color:
-                selected ? AppTheme.accent : AppTheme.dividerColor,
+            color: selected ? AppTheme.accent : AppTheme.borderSubtle,
           ),
         ),
         child: Text(
           label,
-          style: TextStyle(
-            color: selected
-                ? AppTheme.accent
-                : AppTheme.textSecondary,
-            fontSize: 12,
-            fontWeight:
-                selected ? FontWeight.bold : FontWeight.normal,
+          style: AppTheme.label(
+            size: 13,
+            color: selected ? AppTheme.accent : AppTheme.textSecondary,
+            weight: selected ? FontWeight.w600 : FontWeight.w400,
           ),
         ),
       ),
@@ -524,9 +520,9 @@ class _TaskCard extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: AppTheme.panel,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppTheme.dividerColor),
+            color: AppTheme.surface01,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: AppTheme.borderSubtle),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -535,17 +531,11 @@ class _TaskCard extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(task.title,
-                        style: TextStyle(
-                            color: task.status ==
-                                    TaskStatus.completada
+                        style: AppTheme.cardTitle(
+                            size: 14,
+                            color: task.status == TaskStatus.completada
                                 ? AppTheme.textSecondary
-                                : AppTheme.textPrimary,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14,
-                            decoration:
-                                task.status == TaskStatus.completada
-                                    ? TextDecoration.lineThrough
-                                    : null)),
+                                : AppTheme.textPrimary)),
                   ),
                   const SizedBox(width: 8),
                   PriorityBadge(task.priority),
@@ -554,8 +544,7 @@ class _TaskCard extends StatelessWidget {
               if (task.description.isNotEmpty) ...[
                 const SizedBox(height: 4),
                 Text(task.description,
-                    style: const TextStyle(
-                        color: AppTheme.textSecondary, fontSize: 12),
+                    style: AppTheme.label(size: 13),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis),
               ],
@@ -567,15 +556,11 @@ class _TaskCard extends StatelessWidget {
                         color: AppTheme.textSecondary, size: 14),
                     const SizedBox(width: 4),
                     Text(task.assignedToName!,
-                        style: const TextStyle(
-                            color: AppTheme.textSecondary,
-                            fontSize: 11)),
+                        style: AppTheme.label(size: 13)),
                     const SizedBox(width: 12),
                   ],
                   Text(timeAgo(task.createdAt),
-                      style: const TextStyle(
-                          color: AppTheme.textSecondary,
-                          fontSize: 11)),
+                      style: AppTheme.mono(size: 13, color: AppTheme.textSecondary)),
                   const Spacer(),
                   TaskStatusChip(task.status),
                 ],
@@ -588,6 +573,7 @@ class _TaskCard extends StatelessWidget {
   }
 
   void _showTaskDetails(BuildContext context, Task task) {
+    final l10n = AppLocalizations.of(context)!;
     final crew = context.read<AppProvider>().crew;
     String? assignedId = task.assignedToId;
     String? assignedName = task.assignedToName;
@@ -607,7 +593,7 @@ class _TaskCard extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(task.title, style: AppTheme.orbitron(size: 15)),
+                Text(task.title, style: AppTheme.cardTitle(size: 15)),
                 const SizedBox(height: 8),
                 Row(
                   children: [
@@ -627,31 +613,29 @@ class _TaskCard extends StatelessWidget {
                   Row(
                     children: [
                       const Icon(Icons.check_circle_outline,
-                          color: AppTheme.successColor, size: 14),
+                          color: AppTheme.accent, size: 14),
                       const SizedBox(width: 6),
                       Text(
                         'Completada el ${DateFormat('dd/MM/yyyy \'a las\' HH:mm').format(task.completedAt!)}',
-                        style: const TextStyle(
-                            color: AppTheme.successColor, fontSize: 12),
+                        style: AppTheme.mono(size: 13, color: AppTheme.textSecondary),
                       ),
                     ],
                   ),
                 ],
                 const SizedBox(height: 16),
-                Text('ASIGNACIÓN',
-                    style: AppTheme.orbitron(
-                        size: 11, color: AppTheme.textSecondary)),
+                Text(l10n.assignTo.toUpperCase(),
+                    style: AppTheme.sectionLabel()),
                 const SizedBox(height: 10),
                 DropdownButtonFormField<String>(
                   value: assignedId,
                   dropdownColor: AppTheme.panel,
                   style: const TextStyle(color: AppTheme.textPrimary),
-                  decoration: const InputDecoration(
-                    labelText: 'Asignar a tripulante',
+                  decoration: InputDecoration(
+                    labelText: l10n.assignTo,
                   ),
                   items: [
                     const DropdownMenuItem(
-                        value: null, child: Text('Sin asignar')),
+                        value: null, child: Text('—')),
                     ...crew.map((c) => DropdownMenuItem(
                           value: c.id,
                           child: Text(c.name),
@@ -672,22 +656,20 @@ class _TaskCard extends StatelessWidget {
                   controller: instrCtrl,
                   style: const TextStyle(color: AppTheme.textPrimary),
                   maxLines: 2,
-                  decoration: const InputDecoration(
-                    labelText: 'Instrucciones / comentarios',
+                  decoration: InputDecoration(
+                    labelText: l10n.instructions,
                   ),
                 ),
                 const SizedBox(height: 16),
                 // ── CHECKLIST ──
                 Row(
                   children: [
-                    Text('CHECKLIST',
-                        style: AppTheme.orbitron(
-                            size: 11, color: AppTheme.textSecondary)),
+                    Text('CHECKLIST', style: AppTheme.sectionLabel()),
                     const Spacer(),
                     Text(
                       '${localChecklist.where((i) => i.done).length}/${localChecklist.length}',
                       style: const TextStyle(
-                          color: AppTheme.textSecondary, fontSize: 11),
+                          color: AppTheme.textSecondary, fontSize: 13),
                     ),
                   ],
                 ),
@@ -794,7 +776,6 @@ class _TaskCard extends StatelessWidget {
                                 content: Text(assignedId != null
                                     ? 'Tarea asignada a $assignedName'
                                     : 'Tarea actualizada'),
-                                backgroundColor: AppTheme.successColor,
                               ),
                             );
                           },
@@ -804,8 +785,8 @@ class _TaskCard extends StatelessWidget {
                             padding: const EdgeInsets.symmetric(vertical: 12),
                           ),
                           child: Text(task.assignedToId == null
-                              ? 'Asignar'
-                              : 'Reasignar'),
+                              ? l10n.assign
+                              : l10n.reassign),
                         ),
                       ),
                       const SizedBox(width: 10),
@@ -820,7 +801,7 @@ class _TaskCard extends StatelessWidget {
                             context.read<AppProvider>().updateTask(task);
                             Navigator.pop(ctx);
                           },
-                          child: const Text('Completada'),
+                          child: Text(l10n.markAsCompleted),
                         ),
                       ),
                     ],
@@ -846,10 +827,9 @@ class _HistoryTaskCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppTheme.panel,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-            color: AppTheme.successColor.withValues(alpha: 0.3)),
+        color: AppTheme.surface01,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppTheme.borderSubtle),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -857,15 +837,11 @@ class _HistoryTaskCard extends StatelessWidget {
           Row(
             children: [
               const Icon(Icons.check_circle_outline,
-                  color: AppTheme.successColor, size: 16),
+                  color: AppTheme.textSecondary, size: 16),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(task.title,
-                    style: const TextStyle(
-                        color: AppTheme.textPrimary,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 13,
-                        decoration: TextDecoration.lineThrough)),
+                    style: AppTheme.cardTitle(size: 13)),
               ),
               PriorityBadge(task.priority),
             ],
@@ -874,7 +850,7 @@ class _HistoryTaskCard extends StatelessWidget {
             const SizedBox(height: 4),
             Text(task.description,
                 style: const TextStyle(
-                    color: AppTheme.textSecondary, fontSize: 12),
+                    color: AppTheme.textSecondary, fontSize: 13),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis),
           ],
@@ -888,18 +864,16 @@ class _HistoryTaskCard extends StatelessWidget {
                 Text(task.assignedToName!,
                     style: const TextStyle(
                         color: AppTheme.textSecondary,
-                        fontSize: 11)),
+                        fontSize: 13)),
                 const SizedBox(width: 12),
               ],
               if (task.completedAt != null) ...[
                 const Icon(Icons.check,
-                    color: AppTheme.successColor, size: 13),
+                    color: AppTheme.textSecondary, size: 13),
                 const SizedBox(width: 4),
                 Text(
                   DateFormat('dd/MM/yyyy HH:mm').format(task.completedAt!),
-                  style: const TextStyle(
-                      color: AppTheme.successColor,
-                      fontSize: 11)),
+                  style: AppTheme.mono(size: 13, color: AppTheme.textSecondary)),
               ],
               const Spacer(),
               if (task.completionComment != null &&
@@ -932,7 +906,7 @@ class _HistoryTaskCard extends StatelessWidget {
                       Text('Comentario',
                           style: TextStyle(
                               color: AppTheme.textSecondary,
-                              fontSize: 11)),
+                              fontSize: 13)),
                     ],
                   ),
                 ),
@@ -955,10 +929,14 @@ class _RejectedTaskCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppTheme.panel,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-            color: AppTheme.errorColor.withValues(alpha: 0.4)),
+        color: AppTheme.statusAlertBg,
+        borderRadius: BorderRadius.circular(10),
+        border: const Border(
+          left: BorderSide(color: AppTheme.statusAlert, width: 3),
+          top: BorderSide(color: AppTheme.borderSubtle, width: 1),
+          right: BorderSide(color: AppTheme.borderSubtle, width: 1),
+          bottom: BorderSide(color: AppTheme.borderSubtle, width: 1),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -998,7 +976,7 @@ class _RejectedTaskCard extends StatelessWidget {
                       task.rejectionReason!,
                       style: const TextStyle(
                           color: AppTheme.errorColor,
-                          fontSize: 12),
+                          fontSize: 13),
                     ),
                   ),
                 ],
@@ -1011,7 +989,7 @@ class _RejectedTaskCard extends StatelessWidget {
               'Rechazada el ${DateFormat('dd/MM/yyyy \'a las\' HH:mm').format(task.actionAt ?? task.createdAt)}'
               '${task.actionBy != null ? ' · ${task.actionBy}' : ''}',
               style: const TextStyle(
-                  color: AppTheme.textSecondary, fontSize: 10),
+                  color: AppTheme.textSecondary, fontSize: 13),
             ),
           ],
           const SizedBox(height: 12),
@@ -1021,15 +999,14 @@ class _RejectedTaskCard extends StatelessWidget {
                 child: OutlinedButton.icon(
                   onPressed: () => _reassign(context, task),
                   icon: const Icon(Icons.refresh, size: 14),
-                  label: const Text('Reasignar'),
+                  label: Text(AppLocalizations.of(context)!.reassign),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppTheme.accent,
                     side: const BorderSide(
                         color: AppTheme.accent),
                     padding:
                         const EdgeInsets.symmetric(vertical: 8),
-                    textStyle:
-                        const TextStyle(fontSize: 12),
+                    textStyle: AppTheme.label(),
                   ),
                 ),
               ),
@@ -1041,15 +1018,14 @@ class _RejectedTaskCard extends StatelessWidget {
                       .deleteTask(task.id),
                   icon: const Icon(Icons.delete_outline,
                       size: 14),
-                  label: const Text('Eliminar'),
+                  label: Text(AppLocalizations.of(context)!.delete),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppTheme.errorColor,
                     side: const BorderSide(
                         color: AppTheme.errorColor),
                     padding:
                         const EdgeInsets.symmetric(vertical: 8),
-                    textStyle:
-                        const TextStyle(fontSize: 12),
+                    textStyle: AppTheme.label(),
                   ),
                 ),
               ),
@@ -1061,6 +1037,7 @@ class _RejectedTaskCard extends StatelessWidget {
   }
 
   void _reassign(BuildContext context, Task task) {
+    final l10n = AppLocalizations.of(context)!;
     final crew = context.read<AppProvider>().crew;
     String? newAssignedId;
     String? newAssignedName;
@@ -1069,8 +1046,8 @@ class _RejectedTaskCard extends StatelessWidget {
       context: context,
       builder: (_) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          title: Text('Reasignar tarea',
-              style: AppTheme.orbitron(size: 14)),
+          title: Text(l10n.reassignTask,
+              style: AppTheme.sectionLabel(size: 13)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -1085,7 +1062,7 @@ class _RejectedTaskCard extends StatelessWidget {
                 style:
                     const TextStyle(color: AppTheme.textPrimary),
                 decoration:
-                    const InputDecoration(labelText: 'Asignar a'),
+                    InputDecoration(labelText: l10n.assignTo),
                 items: crew
                     .map((c) => DropdownMenuItem(
                           value: c.id,
@@ -1107,7 +1084,7 @@ class _RejectedTaskCard extends StatelessWidget {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancelar'),
+              child: Text(l10n.cancel),
             ),
             TextButton(
               onPressed: () {
@@ -1120,16 +1097,10 @@ class _RejectedTaskCard extends StatelessWidget {
                 task.actionBy = null;
                 context.read<AppProvider>().updateTask(task);
                 Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Tarea reasignada'),
-                    backgroundColor: AppTheme.successColor,
-                  ),
-                );
               },
               style: TextButton.styleFrom(
                   foregroundColor: AppTheme.accent),
-              child: const Text('Reasignar'),
+              child: Text(l10n.reassign),
             ),
           ],
         ),

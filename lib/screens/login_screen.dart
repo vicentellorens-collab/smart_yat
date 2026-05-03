@@ -1,10 +1,12 @@
 ﻿import 'package:flutter/material.dart';
+import 'package:smart_yat/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../config/theme.dart';
 import '../models/models.dart';
 import '../providers/app_provider.dart';
 import '../services/auth_service.dart';
+import '../services/language_service.dart';
+import '../widgets/smartyat_logo.dart';
 import 'manager_home.dart';
 import 'crew_home.dart';
 import 'force_pin_change_screen.dart';
@@ -58,26 +60,9 @@ class _WelcomeView extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           const Spacer(),
-          Container(
-            width: 100,
-            height: 100,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: AppTheme.accent, width: 2),
-              color: AppTheme.panel,
-            ),
-            child: const Center(child: _YachtLogo(size: 62, color: AppTheme.accent)),
-          ),
-          const SizedBox(height: 28),
-          Text('SmartYat', style: AppTheme.orbitron(size: 28)),
-          const SizedBox(height: 10),
-          Text(
-            'Intelligent Yacht Management.',
-            style: GoogleFonts.exo2(
-              color: AppTheme.textSecondary,
-              fontSize: 15,
-              letterSpacing: 1.5,
-            ),
+          SmartYatLogo(
+            width: 200,
+            showTagline: true,
           ),
           const Spacer(),
           if (hasUsers) ...[
@@ -85,15 +70,15 @@ class _WelcomeView extends StatelessWidget {
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: onLogin,
-                child: const Text('ACCEDER'),
+                child: Text(AppLocalizations.of(context)!.login.toUpperCase()),
               ),
             ),
             const SizedBox(height: 12),
             TextButton(
               onPressed: onRegister,
               child: Text(
-                'Registrar nuevo yate',
-                style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                AppLocalizations.of(context)!.register,
+                style: AppTheme.label(),
               ),
             ),
           ] else ...[
@@ -101,22 +86,22 @@ class _WelcomeView extends StatelessWidget {
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: onRegister,
-                child: const Text('CONFIGURAR YATE'),
+                child: Text(AppLocalizations.of(context)!.setupYacht.toUpperCase()),
               ),
             ),
             const SizedBox(height: 12),
             TextButton(
               onPressed: onLogin,
               child: Text(
-                'Ya tengo cuenta',
-                style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                AppLocalizations.of(context)!.alreadyHaveAccount,
+                style: AppTheme.label(),
               ),
             ),
           ],
           const SizedBox(height: 20),
           Text(
             'v2.3.0 · SmartYat',
-            style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11),
+            style: AppTheme.label(),
           ),
           const SizedBox(height: 8),
         ],
@@ -159,16 +144,17 @@ class _RegisterViewState extends State<_RegisterView> {
     final pin = _pinCtrl.text.trim();
     final confirm = _confirmPinCtrl.text.trim();
 
+    final l10n = AppLocalizations.of(context)!;
     if (name.isEmpty || yacht.isEmpty || pin.isEmpty) {
-      _snack('Completa todos los campos obligatorios');
+      _snack(l10n.pinRequired);
       return;
     }
     if (pin.length != 4) {
-      _snack('El PIN debe tener exactamente 4 dÃ­gitos');
+      _snack(l10n.pinMustBe4Digits);
       return;
     }
     if (pin != confirm) {
-      _snack('Los PINs no coinciden');
+      _snack(l10n.pinsDontMatch);
       return;
     }
 
@@ -210,19 +196,19 @@ class _RegisterViewState extends State<_RegisterView> {
                 onPressed: widget.onBack,
               ),
               const SizedBox(width: 8),
-              Text('REGISTRAR YATE', style: AppTheme.orbitron(size: 16)),
+              Text(AppLocalizations.of(context)!.setupYacht.toUpperCase(), style: AppTheme.displayCondensed(size: 17)),
             ],
           ),
           const SizedBox(height: 24),
           Text('DATOS DEL ADMINISTRADOR',
-              style: AppTheme.orbitron(size: 11, color: AppTheme.textSecondary)),
+              style: AppTheme.sectionLabel()),
           const SizedBox(height: 14),
           TextField(
             controller: _nameCtrl,
             style: const TextStyle(color: AppTheme.textPrimary),
-            decoration: const InputDecoration(
-              labelText: 'Tu nombre *',
-              prefixIcon: Icon(Icons.person_outline, color: AppTheme.textSecondary),
+            decoration: InputDecoration(
+              labelText: '${AppLocalizations.of(context)!.firstName} *',
+              prefixIcon: const Icon(Icons.person_outline, color: AppTheme.textSecondary),
             ),
             textCapitalization: TextCapitalization.words,
           ),
@@ -230,35 +216,35 @@ class _RegisterViewState extends State<_RegisterView> {
           TextField(
             controller: _emailCtrl,
             style: const TextStyle(color: AppTheme.textPrimary),
-            decoration: const InputDecoration(
-              labelText: 'Email (opcional)',
-              prefixIcon: Icon(Icons.email_outlined, color: AppTheme.textSecondary),
+            decoration: InputDecoration(
+              labelText: AppLocalizations.of(context)!.adminEmail,
+              prefixIcon: const Icon(Icons.email_outlined, color: AppTheme.textSecondary),
             ),
             keyboardType: TextInputType.emailAddress,
           ),
           const SizedBox(height: 20),
-          Text('DATOS DEL YATE',
-              style: AppTheme.orbitron(size: 11, color: AppTheme.textSecondary)),
+          Text(AppLocalizations.of(context)!.yachtName.toUpperCase(),
+              style: AppTheme.sectionLabel()),
           const SizedBox(height: 14),
           TextField(
             controller: _yachtCtrl,
             style: const TextStyle(color: AppTheme.textPrimary),
-            decoration: const InputDecoration(
-              labelText: 'Nombre del yate *',
-              prefixIcon: Icon(Icons.sailing, color: AppTheme.textSecondary),
+            decoration: InputDecoration(
+              labelText: '${AppLocalizations.of(context)!.yachtName} *',
+              prefixIcon: const Icon(Icons.sailing, color: AppTheme.textSecondary),
             ),
             textCapitalization: TextCapitalization.words,
           ),
           const SizedBox(height: 20),
-          Text('PIN DE ACCESO',
-              style: AppTheme.orbitron(size: 11, color: AppTheme.textSecondary)),
+          Text(AppLocalizations.of(context)!.enterPin.toUpperCase(),
+              style: AppTheme.sectionLabel()),
           const SizedBox(height: 14),
           TextField(
             controller: _pinCtrl,
             style: const TextStyle(color: AppTheme.textPrimary),
-            decoration: const InputDecoration(
-              labelText: 'PIN (exactamente 4 dÃ­gitos) *',
-              prefixIcon: Icon(Icons.lock_outline, color: AppTheme.textSecondary),
+            decoration: InputDecoration(
+              labelText: '${AppLocalizations.of(context)!.newPin} *',
+              prefixIcon: const Icon(Icons.lock_outline, color: AppTheme.textSecondary),
             ),
             keyboardType: TextInputType.number,
             obscureText: true,
@@ -268,9 +254,9 @@ class _RegisterViewState extends State<_RegisterView> {
           TextField(
             controller: _confirmPinCtrl,
             style: const TextStyle(color: AppTheme.textPrimary),
-            decoration: const InputDecoration(
-              labelText: 'Confirmar PIN *',
-              prefixIcon: Icon(Icons.lock_outline, color: AppTheme.textSecondary),
+            decoration: InputDecoration(
+              labelText: '${AppLocalizations.of(context)!.confirmPin} *',
+              prefixIcon: const Icon(Icons.lock_outline, color: AppTheme.textSecondary),
             ),
             keyboardType: TextInputType.number,
             obscureText: true,
@@ -287,7 +273,7 @@ class _RegisterViewState extends State<_RegisterView> {
                       width: 20,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Text('REGISTRAR'),
+                  : Text(AppLocalizations.of(context)!.register.toUpperCase()),
             ),
           ),
         ],
@@ -355,13 +341,14 @@ class _LoginViewState extends State<_LoginView> {
     final verified = AuthService.verifyPin(_pin, _selectedUser!.pin);
     if (!verified) {
       setState(() {
-        _error = 'PIN incorrecto';
+        _error = AppLocalizations.of(context)!.wrongPin;
         _pin = '';
       });
       return;
     }
 
     provider.login(_selectedUser!);
+    context.read<LanguageService>().loadLanguageForUser(_selectedUser!.id);
     if (_selectedUser!.mustChangePIN) {
       Navigator.of(context).pushReplacement(MaterialPageRoute(
         builder: (_) => ForcePinChangeScreen(user: _selectedUser!),
@@ -393,13 +380,13 @@ class _LoginViewState extends State<_LoginView> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('RECUPERAR PIN ADMIN',
-                  style: AppTheme.orbitron(size: 14)),
+                  style: AppTheme.sectionLabel(size: 13)),
               const SizedBox(height: 8),
               if (!verified) ...[
                 const Text(
                   'Para verificar tu identidad, introduce el nombre del yate tal como lo registraste.',
                   style: TextStyle(
-                      color: AppTheme.textSecondary, fontSize: 12),
+                      color: AppTheme.textSecondary, fontSize: 13),
                 ),
                 const SizedBox(height: 16),
                 TextField(
@@ -438,10 +425,9 @@ class _LoginViewState extends State<_LoginView> {
                   ),
                 ),
               ] else ...[
-                const Text(
+                Text(
                   'VerificaciÃ³n correcta. Define tu nuevo PIN de 4 dÃ­gitos.',
-                  style: TextStyle(
-                      color: AppTheme.successColor, fontSize: 12),
+                  style: AppTheme.label(size: 13, color: AppTheme.accent),
                 ),
                 const SizedBox(height: 16),
                 TextField(
@@ -508,7 +494,6 @@ class _LoginViewState extends State<_LoginView> {
                           const SnackBar(
                             content: Text(
                                 'PIN actualizado. Ahora accede con tu nuevo PIN.'),
-                            backgroundColor: AppTheme.successColor,
                           ),
                         );
                       }
@@ -547,12 +532,12 @@ class _LoginViewState extends State<_LoginView> {
                 onPressed: widget.onBack,
               ),
               const SizedBox(width: 8),
-              Text('ACCEDER', style: AppTheme.orbitron(size: 16)),
+              Text(AppLocalizations.of(context)!.login.toUpperCase(), style: AppTheme.displayCondensed(size: 17)),
             ],
           ),
           const SizedBox(height: 24),
           Text('SELECCIONA TU PERFIL',
-              style: AppTheme.orbitron(size: 11, color: AppTheme.textSecondary)),
+              style: AppTheme.sectionLabel()),
           const SizedBox(height: 16),
           if (users.isEmpty)
             const Center(
@@ -592,19 +577,16 @@ class _LoginViewState extends State<_LoginView> {
                 }),
               ),
               const SizedBox(width: 8),
-              Text('INTRODUCE TU PIN', style: AppTheme.orbitron(size: 14)),
+              Text(AppLocalizations.of(context)!.enterPin.toUpperCase(), style: AppTheme.sectionLabel(size: 13)),
             ],
           ),
           const SizedBox(height: 32),
           CircleAvatar(
             radius: 32,
-            backgroundColor: AppTheme.accent.withValues(alpha: 0.2),
+            backgroundColor: AppTheme.accentDim,
             child: Text(
               user.name[0],
-              style: const TextStyle(
-                  color: AppTheme.accent,
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold),
+              style: AppTheme.displayCondensed(size: 24, color: AppTheme.accent),
             ),
           ),
           const SizedBox(height: 12),
@@ -615,7 +597,7 @@ class _LoginViewState extends State<_LoginView> {
                   fontWeight: FontWeight.w600)),
           Text(
             user.role == UserRole.gestor ? 'Gestor / CapitÃ¡n' : 'Tripulante',
-            style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+            style: AppTheme.label(),
           ),
           const SizedBox(height: 32),
           // PIN dots
@@ -642,7 +624,7 @@ class _LoginViewState extends State<_LoginView> {
           if (_error != null) ...[
             const SizedBox(height: 12),
             Text(_error!,
-                style: const TextStyle(color: AppTheme.errorColor, fontSize: 12)),
+                style: AppTheme.label(color: AppTheme.statusAlert)),
           ],
           const SizedBox(height: 32),
           // Numpad
@@ -657,7 +639,7 @@ class _LoginViewState extends State<_LoginView> {
               child: const Text(
                 'Â¿Olvidaste tu PIN?',
                 style: TextStyle(
-                    color: AppTheme.textSecondary, fontSize: 12),
+                    color: AppTheme.textSecondary, fontSize: 13),
               ),
             ),
           ],
@@ -696,11 +678,10 @@ class _UserTile extends StatelessWidget {
           children: [
             CircleAvatar(
               radius: 20,
-              backgroundColor: AppTheme.accent.withValues(alpha: 0.2),
+              backgroundColor: AppTheme.accentDim,
               child: Text(
                 user.name[0],
-                style: const TextStyle(
-                    color: AppTheme.accent, fontWeight: FontWeight.bold),
+                style: AppTheme.cardTitle(color: AppTheme.accent),
               ),
             ),
             const SizedBox(width: 14),
@@ -715,7 +696,7 @@ class _UserTile extends StatelessWidget {
                   Text(
                     user.role == UserRole.gestor ? 'Gestor' : 'Tripulante',
                     style: const TextStyle(
-                        color: AppTheme.textSecondary, fontSize: 12),
+                        color: AppTheme.textSecondary, fontSize: 13),
                   ),
                 ],
               ),
@@ -748,7 +729,7 @@ class _StatusBadge extends StatelessWidget {
       ),
       child: Text(label,
           style: TextStyle(
-              color: color, fontSize: 10, fontWeight: FontWeight.bold)),
+              color: color, fontSize: 13, fontWeight: FontWeight.bold)),
     );
   }
 }
@@ -811,9 +792,9 @@ class _NumPadKey extends StatelessWidget {
         height: 64,
         margin: const EdgeInsets.all(4),
         decoration: BoxDecoration(
-          color: AppTheme.panel,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppTheme.dividerColor),
+          color: AppTheme.surface01,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppTheme.borderSubtle),
         ),
         alignment: Alignment.center,
         child: child,
