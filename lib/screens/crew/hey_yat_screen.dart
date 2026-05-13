@@ -317,7 +317,6 @@ class _HeyYatScreenState extends State<HeyYatScreen>
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           // Title row with TTS toggle
           Row(
@@ -424,7 +423,7 @@ class _HeyYatScreenState extends State<HeyYatScreen>
           const SizedBox(height: 32),
 
           // Main state content
-          _buildStateContent(),
+          Expanded(child: _buildStateContent()),
 
           const SizedBox(height: 32),
 
@@ -842,11 +841,11 @@ class _HeyYatScreenState extends State<HeyYatScreen>
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
             child: Text('RECIENTES', style: AppTheme.sectionLabel()),
           ),
-          SizedBox(
-            height: 68,
+          ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 76, maxHeight: 96),
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
               itemCount: commands.length,
               separatorBuilder: (_, __) => const SizedBox(width: 8),
               itemBuilder: (_, i) {
@@ -864,6 +863,8 @@ class _HeyYatScreenState extends State<HeyYatScreen>
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Row(
                           children: [

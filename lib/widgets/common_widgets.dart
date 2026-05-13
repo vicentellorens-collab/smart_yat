@@ -73,7 +73,14 @@ class StatCard extends StatelessWidget {
               const SizedBox(height: 8),
               Text(value, style: AppTheme.displayCondensed(size: 34, color: color)),
               const SizedBox(height: 4),
-              Flexible(child: Text(label, style: AppTheme.label(size: 13), overflow: TextOverflow.ellipsis)),
+              Flexible(
+                child: Text(
+                  label,
+                  style: AppTheme.label(size: 12).copyWith(height: 1.15),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             ],
           ),
         ),
