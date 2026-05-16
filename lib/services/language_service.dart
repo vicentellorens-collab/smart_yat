@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class LanguageService extends ChangeNotifier {
   static const String _keyPrefix = 'user_language_';
+  static const String _deviceKey = 'device_language';
   static const String _defaultLocale = 'en';
 
   static const List<Map<String, String>> supportedLanguages = [
@@ -35,6 +36,30 @@ class LanguageService extends ChangeNotifier {
         orElse: () => supportedLanguages.first,
       );
 
+  Future<void> loadDeviceLanguage() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedCode = prefs.getString(_deviceKey);
+    if (savedCode != null && supportedLanguages.any((l) => l['code'] == savedCode)) {
+      _currentLocale = Locale(savedCode);
+    } else {
+      final systemCode =
+          WidgetsBinding.instance.platformDispatcher.locale.languageCode;
+      if (supportedLanguages.any((l) => l['code'] == systemCode)) {
+        _currentLocale = Locale(systemCode);
+      } else {
+        _currentLocale = const Locale(_defaultLocale);
+      }
+    }
+    notifyListeners();
+  }
+
+  Future<void> setDeviceLanguage(String languageCode) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_deviceKey, languageCode);
+    _currentLocale = Locale(languageCode);
+    notifyListeners();
+  }
+
   Future<void> loadLanguageForUser(String userId) async {
     final prefs = await SharedPreferences.getInstance();
     final savedCode = prefs.getString('$_keyPrefix$userId') ?? _defaultLocale;
@@ -49,6 +74,11 @@ class LanguageService extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> resetToDeviceLanguage() async {
+    await loadDeviceLanguage();
+  }
+
+  // Deprecated: use resetToDeviceLanguage()
   void resetToDefault() {
     _currentLocale = const Locale(_defaultLocale);
     notifyListeners();

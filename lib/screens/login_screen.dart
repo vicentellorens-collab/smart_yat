@@ -54,58 +54,67 @@ class _WelcomeView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hasUsers = context.watch<AppProvider>().users.isNotEmpty;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 40),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Spacer(),
-          SmartYatLogo(
-            width: 200,
-            showTagline: true,
-          ),
-          const Spacer(),
-          if (hasUsers) ...[
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: onLogin,
-                child: Text(AppLocalizations.of(context)!.login.toUpperCase()),
+    return Stack(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 40),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Spacer(),
+              SmartYatLogo(
+                width: 200,
+                showTagline: true,
               ),
-            ),
-            const SizedBox(height: 12),
-            TextButton(
-              onPressed: onRegister,
-              child: Text(
-                AppLocalizations.of(context)!.register,
+              const Spacer(),
+              if (hasUsers) ...[
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: onLogin,
+                    child: Text(AppLocalizations.of(context)!.login.toUpperCase()),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextButton(
+                  onPressed: onRegister,
+                  child: Text(
+                    AppLocalizations.of(context)!.register,
+                    style: AppTheme.label(),
+                  ),
+                ),
+              ] else ...[
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: onRegister,
+                    child: Text(AppLocalizations.of(context)!.setupYacht.toUpperCase()),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextButton(
+                  onPressed: onLogin,
+                  child: Text(
+                    AppLocalizations.of(context)!.alreadyHaveAccount,
+                    style: AppTheme.label(),
+                  ),
+                ),
+              ],
+              const SizedBox(height: 20),
+              Text(
+                'v2.3.0 · SmartYat',
                 style: AppTheme.label(),
               ),
-            ),
-          ] else ...[
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: onRegister,
-                child: Text(AppLocalizations.of(context)!.setupYacht.toUpperCase()),
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextButton(
-              onPressed: onLogin,
-              child: Text(
-                AppLocalizations.of(context)!.alreadyHaveAccount,
-                style: AppTheme.label(),
-              ),
-            ),
-          ],
-          const SizedBox(height: 20),
-          Text(
-            'v2.3.0 · SmartYat',
-            style: AppTheme.label(),
+              const SizedBox(height: 8),
+            ],
           ),
-          const SizedBox(height: 8),
-        ],
-      ),
+        ),
+        const Positioned(
+          top: 12,
+          right: 16,
+          child: _LanguagePickerButton(),
+        ),
+      ],
     );
   }
 }
@@ -184,100 +193,109 @@ class _RegisterViewState extends State<_RegisterView> {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    return Stack(
+      children: [
+        SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              IconButton(
-                icon: const Icon(Icons.arrow_back, color: AppTheme.accent),
-                onPressed: widget.onBack,
+              Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back, color: AppTheme.accent),
+                    onPressed: widget.onBack,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(AppLocalizations.of(context)!.setupYacht.toUpperCase(), style: AppTheme.displayCondensed(size: 17)),
+                ],
               ),
-              const SizedBox(width: 8),
-              Text(AppLocalizations.of(context)!.setupYacht.toUpperCase(), style: AppTheme.displayCondensed(size: 17)),
+              const SizedBox(height: 24),
+              Text('DATOS DEL ADMINISTRADOR',
+                  style: AppTheme.sectionLabel()),
+              const SizedBox(height: 14),
+              TextField(
+                controller: _nameCtrl,
+                style: const TextStyle(color: AppTheme.textPrimary),
+                decoration: InputDecoration(
+                  labelText: '${AppLocalizations.of(context)!.firstName} *',
+                  prefixIcon: const Icon(Icons.person_outline, color: AppTheme.textSecondary),
+                ),
+                textCapitalization: TextCapitalization.words,
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _emailCtrl,
+                style: const TextStyle(color: AppTheme.textPrimary),
+                decoration: InputDecoration(
+                  labelText: AppLocalizations.of(context)!.adminEmail,
+                  prefixIcon: const Icon(Icons.email_outlined, color: AppTheme.textSecondary),
+                ),
+                keyboardType: TextInputType.emailAddress,
+              ),
+              const SizedBox(height: 20),
+              Text(AppLocalizations.of(context)!.yachtName.toUpperCase(),
+                  style: AppTheme.sectionLabel()),
+              const SizedBox(height: 14),
+              TextField(
+                controller: _yachtCtrl,
+                style: const TextStyle(color: AppTheme.textPrimary),
+                decoration: InputDecoration(
+                  labelText: '${AppLocalizations.of(context)!.yachtName} *',
+                  prefixIcon: const Icon(Icons.sailing, color: AppTheme.textSecondary),
+                ),
+                textCapitalization: TextCapitalization.words,
+              ),
+              const SizedBox(height: 20),
+              Text(AppLocalizations.of(context)!.enterPin.toUpperCase(),
+                  style: AppTheme.sectionLabel()),
+              const SizedBox(height: 14),
+              TextField(
+                controller: _pinCtrl,
+                style: const TextStyle(color: AppTheme.textPrimary),
+                decoration: InputDecoration(
+                  labelText: '${AppLocalizations.of(context)!.newPin} *',
+                  prefixIcon: const Icon(Icons.lock_outline, color: AppTheme.textSecondary),
+                ),
+                keyboardType: TextInputType.number,
+                obscureText: true,
+                maxLength: 4,
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _confirmPinCtrl,
+                style: const TextStyle(color: AppTheme.textPrimary),
+                decoration: InputDecoration(
+                  labelText: '${AppLocalizations.of(context)!.confirmPin} *',
+                  prefixIcon: const Icon(Icons.lock_outline, color: AppTheme.textSecondary),
+                ),
+                keyboardType: TextInputType.number,
+                obscureText: true,
+                maxLength: 4,
+              ),
+              const SizedBox(height: 28),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _loading ? null : _register,
+                  child: _loading
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Text(AppLocalizations.of(context)!.register.toUpperCase()),
+                ),
+              ),
             ],
           ),
-          const SizedBox(height: 24),
-          Text('DATOS DEL ADMINISTRADOR',
-              style: AppTheme.sectionLabel()),
-          const SizedBox(height: 14),
-          TextField(
-            controller: _nameCtrl,
-            style: const TextStyle(color: AppTheme.textPrimary),
-            decoration: InputDecoration(
-              labelText: '${AppLocalizations.of(context)!.firstName} *',
-              prefixIcon: const Icon(Icons.person_outline, color: AppTheme.textSecondary),
-            ),
-            textCapitalization: TextCapitalization.words,
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _emailCtrl,
-            style: const TextStyle(color: AppTheme.textPrimary),
-            decoration: InputDecoration(
-              labelText: AppLocalizations.of(context)!.adminEmail,
-              prefixIcon: const Icon(Icons.email_outlined, color: AppTheme.textSecondary),
-            ),
-            keyboardType: TextInputType.emailAddress,
-          ),
-          const SizedBox(height: 20),
-          Text(AppLocalizations.of(context)!.yachtName.toUpperCase(),
-              style: AppTheme.sectionLabel()),
-          const SizedBox(height: 14),
-          TextField(
-            controller: _yachtCtrl,
-            style: const TextStyle(color: AppTheme.textPrimary),
-            decoration: InputDecoration(
-              labelText: '${AppLocalizations.of(context)!.yachtName} *',
-              prefixIcon: const Icon(Icons.sailing, color: AppTheme.textSecondary),
-            ),
-            textCapitalization: TextCapitalization.words,
-          ),
-          const SizedBox(height: 20),
-          Text(AppLocalizations.of(context)!.enterPin.toUpperCase(),
-              style: AppTheme.sectionLabel()),
-          const SizedBox(height: 14),
-          TextField(
-            controller: _pinCtrl,
-            style: const TextStyle(color: AppTheme.textPrimary),
-            decoration: InputDecoration(
-              labelText: '${AppLocalizations.of(context)!.newPin} *',
-              prefixIcon: const Icon(Icons.lock_outline, color: AppTheme.textSecondary),
-            ),
-            keyboardType: TextInputType.number,
-            obscureText: true,
-            maxLength: 4,
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _confirmPinCtrl,
-            style: const TextStyle(color: AppTheme.textPrimary),
-            decoration: InputDecoration(
-              labelText: '${AppLocalizations.of(context)!.confirmPin} *',
-              prefixIcon: const Icon(Icons.lock_outline, color: AppTheme.textSecondary),
-            ),
-            keyboardType: TextInputType.number,
-            obscureText: true,
-            maxLength: 4,
-          ),
-          const SizedBox(height: 28),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _loading ? null : _register,
-              child: _loading
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : Text(AppLocalizations.of(context)!.register.toUpperCase()),
-            ),
-          ),
-        ],
-      ),
+        ),
+        const Positioned(
+          top: 12,
+          right: 16,
+          child: _LanguagePickerButton(),
+        ),
+      ],
     );
   }
 }
@@ -512,11 +530,17 @@ class _LoginViewState extends State<_LoginView> {
   @override
   Widget build(BuildContext context) {
     final users = context.watch<AppProvider>().users;
-
-    if (_selectedUser == null) {
-      return _buildUserPicker(users);
-    }
-    return _buildPinPad();
+    final content = _selectedUser == null ? _buildUserPicker(users) : _buildPinPad();
+    return Stack(
+      children: [
+        content,
+        const Positioned(
+          top: 12,
+          right: 16,
+          child: _LanguagePickerButton(),
+        ),
+      ],
+    );
   }
 
   Widget _buildUserPicker(List<AppUser> users) {
@@ -799,6 +823,69 @@ class _NumPadKey extends StatelessWidget {
         alignment: Alignment.center,
         child: child,
       ),
+    );
+  }
+}
+
+// ==================== LANGUAGE PICKER ====================
+
+class _LanguagePickerButton extends StatelessWidget {
+  const _LanguagePickerButton();
+
+  @override
+  Widget build(BuildContext context) {
+    final languageService = context.watch<LanguageService>();
+    final current = languageService.currentLanguage;
+    return TextButton.icon(
+      onPressed: () => _showLanguageSheet(context),
+      icon: Text(current['flag']!, style: const TextStyle(fontSize: 18)),
+      label: Text(
+        current['code']!.toUpperCase(),
+        style: AppTheme.label(color: AppTheme.textPrimary.withValues(alpha: 0.8)),
+      ),
+      style: TextButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        minimumSize: Size.zero,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+    );
+  }
+
+  void _showLanguageSheet(BuildContext context) {
+    final languageService = context.read<LanguageService>();
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppTheme.surface01,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (sheetCtx) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: LanguageService.supportedLanguages.map((lang) {
+              final isSelected = lang['code'] == languageService.currentLanguageCode;
+              return ListTile(
+                leading: Text(lang['flag']!, style: const TextStyle(fontSize: 24)),
+                title: Text(
+                  lang['name']!,
+                  style: AppTheme.label(
+                    color: isSelected ? AppTheme.accent : AppTheme.textPrimary,
+                    weight: isSelected ? FontWeight.w700 : FontWeight.w400,
+                  ),
+                ),
+                trailing: isSelected
+                    ? const Icon(Icons.check_circle, color: AppTheme.accent)
+                    : null,
+                onTap: () {
+                  languageService.setDeviceLanguage(lang['code']!);
+                  Navigator.pop(sheetCtx);
+                },
+              );
+            }).toList(),
+          ),
+        );
+      },
     );
   }
 }

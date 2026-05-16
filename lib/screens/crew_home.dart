@@ -20,9 +20,10 @@ class CrewHome extends StatefulWidget {
 class _CrewHomeState extends State<CrewHome> {
   int _currentIndex = 0;
 
-  void _changeUser() {
+  void _changeUser() async {
     context.read<AppProvider>().logout();
-    context.read<LanguageService>().resetToDefault();
+    await context.read<LanguageService>().resetToDeviceLanguage();
+    if (!mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => const LoginScreen()),
       (_) => false,

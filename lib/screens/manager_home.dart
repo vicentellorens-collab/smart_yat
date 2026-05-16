@@ -48,9 +48,10 @@ class _ManagerHomeState extends State<ManagerHome> {
     });
   }
 
-  void _switchProfile() {
+  void _switchProfile() async {
     context.read<AppProvider>().logout();
-    context.read<LanguageService>().resetToDefault();
+    await context.read<LanguageService>().resetToDeviceLanguage();
+    if (!mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => const LoginScreen()),
       (_) => false,

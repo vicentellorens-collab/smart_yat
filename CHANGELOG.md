@@ -15,9 +15,15 @@ Plan completo: `SmartCrew_Correcciones_v2_4_para_Claude_Code.md` en la raíz.
 - **HEY YAT, overflow de 8px en cards "RECIENTES"**: en `lib/screens/crew/hey_yat_screen.dart`, método `_buildHistory()`, el `SizedBox(height: 68)` se sustituye por `ConstrainedBox(minHeight: 76, maxHeight: 96)`, el padding inferior del ListView pasa de 12 a 8, y el Column de cada card recibe `mainAxisSize: MainAxisSize.min` + `mainAxisAlignment: MainAxisAlignment.center`.
 - **HEY YAT, overflow de 31px en el resultado**: en `lib/screens/crew/hey_yat_screen.dart`, método `_buildMain()`, se quita `mainAxisAlignment: MainAxisAlignment.center` del Column principal y `_buildStateContent()` queda envuelto en `Expanded(...)` para que el `SingleChildScrollView` interno de `_buildResultState()` reciba altura acotada y pueda hacer scroll real.
 
+### Bloque 1 — Selector de idioma en pantalla de login (completado)
+
+- **LanguageService ampliado** (`lib/services/language_service.dart`): nueva constante `_deviceKey = 'device_language'`, nuevos métodos `loadDeviceLanguage()` (lee preferencia guardada o cae al idioma del sistema si está entre los 5 soportados, fallback a inglés) y `setDeviceLanguage(code)` (persiste y aplica). Añadido `resetToDeviceLanguage()` para usarse en logout. El método antiguo `resetToDefault()` queda marcado como deprecated.
+- **Inicialización al arrancar** (`lib/main.dart`): `await languageService.loadDeviceLanguage()` antes de `runApp()`, para que la pantalla de login aparezca ya en el idioma correcto sin parpadeo.
+- **Selector visual en login** (`lib/screens/login_screen.dart`): nuevo widget privado `_LanguagePickerButton` que muestra bandera + código ISO ("🇬🇧 EN") arriba a la derecha. Al pulsar abre un `showModalBottomSheet` con los 5 idiomas (bandera + nombre nativo + check si está seleccionado). Aplicado a las tres vistas (`_WelcomeView`, `_RegisterView`, `_LoginView`) envolviendo el contenido en un Stack.
+- **Logout vuelve al idioma del dispositivo** (`lib/screens/manager_home.dart` y `lib/screens/crew_home.dart`): los métodos `_switchProfile()` y `_changeUser()` ahora son async y llaman a `languageService.resetToDeviceLanguage()` en lugar de `resetToDefault()`.
+
 ### Bloques pendientes en la Tanda 1 (UI y refactors, sin SQL ni paquetes pesados)
 
-- Bloque 1 — Selector de idioma en pantalla de login
 - Bloque 5 — Rediseño del dashboard (estructura nueva, eliminar widget de escanear, consolidar incidencias, mover Tripulación al drawer)
 - Bloque 3 — Reorganización de Certificados con vista jerárquica por tripulante
 
@@ -34,5 +40,5 @@ Plan completo: `SmartCrew_Correcciones_v2_4_para_Claude_Code.md` en la raíz.
 ## Estado técnico actual
 
 - Flutter analyze: 44 issues preexistentes, ninguno bloqueante. Mayoría son `withOpacity` deprecado (Flutter pide migrar a `.withValues()`). Se atacarán en un bloque de limpieza posterior.
-- Idiomas soportados: EN, ES, FR, RU, ZH (ya implementado en `lib/l10n/`).
+- Idiomas soportados: EN, ES, FR, RU, ZH. Idioma del dispositivo persistente desde la pantalla de login (Bloque 1); idioma por usuario persistente tras login (M10 previo).
 - Supabase: 11 tablas, todas con políticas `anon_full_access` (riesgo CRÍTICO — pendiente de migrar a `auth.uid()` según `SmartCrew_Plan_Seguridad_Arquitectura.docx`).

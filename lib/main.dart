@@ -37,6 +37,7 @@ void main() async {
   await appProvider.initialize();
 
   final languageService = LanguageService();
+  await languageService.loadDeviceLanguage();
 
   runApp(
     MultiProvider(
