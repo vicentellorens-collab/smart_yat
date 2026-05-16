@@ -35,9 +35,41 @@ Notas técnicas:
 - `flutter analyze` baja de 44 a 43 issues (uno menos porque la variable `user` ahora se usa en el header del drawer).
 - `lib/screens/manager/document_scan_screen.dart` y `lib/screens/manager/owner_preferences_screen.dart` siguen existiendo en disco pero ya no se referencian desde el nav. Se mantienen como referencia hasta que Bloque 4 (escaneo de certificados) decida si la lógica de escaneo se reutiliza o se reimplementa.
 
+### Bloque 3 — Certificados con vista jerárquica por tripulante (completado)
+
+- **Pestaña "Del Barco" sin cambios** en `lib/screens/manager/certificates_screen.dart`. La pestaña "Tripulantes" pasa de lista plana a vista de dos niveles.
+- **Nivel 1 — lista de tripulantes con resumen** (`_buildLevel1()`): cada `_CrewWithCertsTile` muestra avatar (foto o iniciales), nombre, cargo · departamento, y badges-pill a la derecha con el conteo por estado (🔴 vencidos + <30d, 🟡 30-90d, 🟢 >90d) mediante `_StatusPill`. Tripulantes sin certificados muestran un pill gris "Sin certificados". Orden de la lista: tripulantes con rojos+vencidos descendente → solo amarillos descendente → solo verdes → sin certificados.
+- **Grupo "Sin asignar"** (`_OrphanTile` + `_buildOrphansLevel2()`): los certificados con `certCategory='tripulante'` pero `crewMemberId==null` aparecen al final de la lista de nivel 1 con icono `warning_amber` y subtexto del número de certificados huérfanos. Al pulsar, se accede al detalle como un grupo más para poder reasignarlos al editar.
+- **Nivel 2 — detalle del tripulante** (`_buildLevel2()`): header con flecha de retorno, avatar, nombre y rol, seguido de la lista de certificados ordenada estrictamente Vencidos → Rojos → Amarillos → Verdes (`_certSortKey()`), y dentro de cada grupo por `daysUntilExpiry` ascendente. Reutiliza el `_CertCard` existente sin tocarlo.
+- **Buscador y filtro por departamento** (`_DeptChip`): el buscador filtra tripulantes (nivel 1) o certificados (nivel 2). El chip de departamento (Deck, Interior, Cook, Engine) filtra la lista de tripulantes en nivel 1.
+- **FAB añadir certificado** desde nivel 2: el diálogo `_showCertDialog()` ahora acepta `preselectedCrew`; cuando se llama desde el detalle de un tripulante, el dropdown de tripulantes viene ya rellenado con el actual y `certCategory='tripulante'` pre-set.
+- **Back button Android gestionado** (`PopScope(canPop: !_inLevel2)`): cuando estamos en nivel 2 (un tripulante seleccionado o el grupo de huérfanos), el botón atrás vuelve a nivel 1 en lugar de salir de la pantalla de Certificados.
+- **Reset al cambiar de pestaña**: un listener del `TabController` resetea `_selectedCrew`, `_showOrphans` y `_departmentFilter` cuando el usuario alterna entre Barco y Tripulantes, evitando estados inconsistentes.
+
+Notas técnicas:
+- `flutter analyze`: el archivo certificates_screen.dart reporta 10 issues (1 unused_import dart:io, 3 curly_braces_in_flow_control_structures, 1 deprecated `value` en form field y varios `withOpacity` → todos preexistentes o cosméticos, marcados para Bloque 7).
+
 ### Bloques pendientes en la Tanda 1 (UI y refactors, sin SQL ni paquetes pesados)
 
-- Bloque 3 — Reorganización de Certificados con vista jerárquica por tripulante
+*(todos completados — ver Estado de la Tanda 1 al final)*
+
+### Bloque 7 — Limpieza técnica (pendiente, tras las tres tandas)
+
+Bloque de mantenimiento para resolver los 43 issues actuales de `flutter analyze`. No bloquean publicación pero conviene atacarlos antes de Google Play. Orden de prioridad:
+
+1. **`use_build_context_synchronously`** (2 ocurrencias en `lib/screens/crew/hey_yat_screen.dart`): riesgo real de crash si el widget se desmonta durante un await. Envolver con `if (!mounted) return;` o equivalente tras cada await.
+2. **Migración `withOpacity` → `withValues(alpha: ...)`** (~35 ocurrencias en varios archivos): cosmético hoy, pero error en futuras versiones de Flutter. Reemplazo masivo con verificación visual.
+3. **Código muerto**: `_YachtLogo` no referenciado en `login_screen.dart`, `import dart:io` sin usar en `certificates_screen.dart`, variable `user` sin usar en otros sitios. Eliminar.
+4. **Convenciones de estilo**: `sort_child_properties_last` en `force_pin_change_screen.dart` y `login_screen.dart`, `prefer_interpolation_to_compose_strings` en `auth_service.dart`. Cosmético.
+
+### Estado de la Tanda 1 (UI y refactors, sin SQL ni paquetes pesados)
+
+✅ Bloque 6 — Bugs de UI (overflows y truncados)
+✅ Bloque 1 — Selector de idioma en pantalla de login
+✅ Bloque 5 — Rediseño del dashboard, drawer lateral y nav reducido
+✅ Bloque 3 — Certificados con vista jerárquica por tripulante
+
+Tanda 1 completada. Pendiente de validación visual en dispositivo real antes de arrancar Tanda 2 (Bloque 2 — Calendario, que añade migración SQL y dependencias nuevas).
 
 ### Tanda 2 (requiere SQL en Supabase)
 
