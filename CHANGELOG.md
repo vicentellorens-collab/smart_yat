@@ -49,6 +49,10 @@ Notas técnicas:
 Notas técnicas:
 - `flutter analyze`: el archivo certificates_screen.dart reporta 10 issues (1 unused_import dart:io, 3 curly_braces_in_flow_control_structures, 1 deprecated `value` en form field y varios `withOpacity` → todos preexistentes o cosméticos, marcados para Bloque 7).
 
+### Mejora UX — Nombre del yate en AppBar (completado)
+
+- **AppBar con dos líneas en todas las pantallas** (`lib/screens/manager_home.dart`): el título del AppBar pasa de una sola línea a una Column con dos líneas. Arriba aparece el nombre del yate en mayúsculas, pequeño y gris (`AppTheme.textSecondary`, fontSize 11, letterSpacing 1.2). Debajo, el título de la pantalla actual con su estilo de antes. El badge "Offline" mantiene su posición a la derecha. Accesor utilizado: `provider.yachtConfig?.name`. Si el yate aún no está configurado (primer arranque), el AppBar muestra solo el título de la pantalla sin subtítulo, sin crash.
+
 ### Bloques pendientes en la Tanda 1 (UI y refactors, sin SQL ni paquetes pesados)
 
 *(todos completados — ver Estado de la Tanda 1 al final)*
@@ -60,7 +64,7 @@ Bloque de mantenimiento para resolver los 43 issues actuales de `flutter analyze
 1. **`use_build_context_synchronously`** (2 ocurrencias en `lib/screens/crew/hey_yat_screen.dart`): riesgo real de crash si el widget se desmonta durante un await. Envolver con `if (!mounted) return;` o equivalente tras cada await.
 2. **Migración `withOpacity` → `withValues(alpha: ...)`** (~35 ocurrencias en varios archivos): cosmético hoy, pero error en futuras versiones de Flutter. Reemplazo masivo con verificación visual.
 3. **Código muerto**: `_YachtLogo` no referenciado en `login_screen.dart`, `import dart:io` sin usar en `certificates_screen.dart`, variable `user` sin usar en otros sitios. Eliminar.
-4. **Convenciones de estilo**: `sort_child_properties_last` en `force_pin_change_screen.dart` y `login_screen.dart`, `prefer_interpolation_to_compose_strings` en `auth_service.dart`. Cosmético.
+4. **Convenciones de estilo**: `sort_child_properties_last` en `force_pin_change_screen.dart` y `login_screen.dart`, `prefer_interpolation_to_compose_strings` en `auth_service.dart`. Cosmético. `curly_braces_in_flow_control_structures` en `lib/screens/manager/certificates_screen.dart` (5 ocurrencias introducidas en Bloque 3 — funciones locales de agrupación y guards). Añadir llaves a los if/return de una línea.
 
 ### Estado de la Tanda 1 (UI y refactors, sin SQL ni paquetes pesados)
 

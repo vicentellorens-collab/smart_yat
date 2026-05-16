@@ -136,10 +136,39 @@ class _ManagerHomeState extends State<ManagerHome> {
             onPressed: () => Scaffold.of(ctx).openDrawer(),
           ),
         ),
+        titleSpacing: 0,
         title: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Text(_showCrewScreen ? l10n.crew : titles[_currentIndex]),
-            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (provider.yachtConfig?.name.isNotEmpty == true)
+                    Text(
+                      provider.yachtConfig!.name.toUpperCase(),
+                      style: const TextStyle(
+                        color: AppTheme.textSecondary,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 1.2,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  Text(
+                    _showCrewScreen ? l10n.crew : titles[_currentIndex],
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
             if (!isOnline)
               Container(
                 padding:
