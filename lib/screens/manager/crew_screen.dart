@@ -57,13 +57,14 @@ class _CrewScreenState extends State<CrewScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.crew.toUpperCase())),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showAddDialog(context),
         icon: const Icon(Icons.person_add_outlined),
         label: Text(l10n.addCrewMember),
       ),
-      body: Column(
+      body: Padding(
+        padding: const EdgeInsets.only(top: 8),
+        child: Column(
         children: [
           SizedBox(
             height: 52,
@@ -119,6 +120,7 @@ class _CrewScreenState extends State<CrewScreen> {
                   ),
           ),
         ],
+        ),
       ),
     );
   }

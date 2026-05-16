@@ -8,20 +8,16 @@ import '../../widgets/common_widgets.dart';
 
 class DashboardScreen extends StatelessWidget {
   final VoidCallback onActiveTasks;
-  final VoidCallback onRejectedTasks;
   final VoidCallback onIncidents;
   final VoidCallback onCertificates;
   final VoidCallback onLowStock;
-  final VoidCallback onDocScan;
 
   const DashboardScreen({
     super.key,
     required this.onActiveTasks,
-    required this.onRejectedTasks,
     required this.onIncidents,
     required this.onCertificates,
     required this.onLowStock,
-    required this.onDocScan,
   });
 
   @override
@@ -43,7 +39,7 @@ class DashboardScreen extends StatelessWidget {
           ),
           const SizedBox(height: 16),
 
-          // Stats grid
+          // Stats grid — 2×2
           GridView.count(
             crossAxisCount: 2,
             shrinkWrap: true,
@@ -58,13 +54,6 @@ class DashboardScreen extends StatelessWidget {
                 icon: Icons.task_alt_outlined,
                 color: AppTheme.accent,
                 onTap: onActiveTasks,
-              ),
-              StatCard(
-                label: l10n.taskRejected,
-                value: '${p.rejectedTasks}',
-                icon: Icons.cancel_outlined,
-                color: p.rejectedTasks > 0 ? AppTheme.statusAlert : AppTheme.accent,
-                onTap: onRejectedTasks,
               ),
               StatCard(
                 label: l10n.openIncidents,
@@ -87,14 +76,32 @@ class DashboardScreen extends StatelessWidget {
                 color: p.lowStockItems > 0 ? AppTheme.statusWarn : AppTheme.accent,
                 onTap: onLowStock,
               ),
-              StatCard(
-                label: l10n.scanDocument,
-                value: '${p.scannedDocuments.length}',
-                icon: Icons.document_scanner_outlined,
-                color: AppTheme.accent,
-                onTap: onDocScan,
-              ),
             ],
+          ),
+          const SizedBox(height: 24),
+
+          // Upcoming events — placeholder hasta Bloque 2
+          SectionTitle(
+            'Próximos eventos',
+            trailing: Text(
+              'Ver todos',
+              style: AppTheme.label(color: AppTheme.textSecondary),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: AppTheme.surface01,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: AppTheme.borderSubtle),
+            ),
+            child: Text(
+              'No hay eventos próximos. Próximamente podrás añadirlos desde HEY YAT.',
+              style: AppTheme.label(color: AppTheme.textSecondary),
+              textAlign: TextAlign.center,
+            ),
           ),
           const SizedBox(height: 24),
 
