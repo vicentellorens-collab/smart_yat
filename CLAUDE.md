@@ -1,123 +1,129 @@
-# Contexto persistente del proyecto
+# CLAUDE.md — SmartYat
 
-**Lee siempre CHANGELOG.md antes de empezar una sesión nueva.** Contiene el estado funcional actual del proyecto, los cambios aplicados recientemente y el plan de trabajo en curso.
+Este archivo orienta a Claude Code al trabajar en este repositorio.
+Léelo antes de empezar cualquier tarea.
 
-Plan de trabajo actual: `SmartCrew_Correcciones_v2_4_para_Claude_Code.md`.
+## Proyecto
 
----
+SmartYat es una app Flutter de gestión operativa inteligente para yates:
+tareas, tripulación, certificados, inventario, incidencias, asistente de voz HEY YAT.
 
-# Smart Yat – CLAUDE.md
+Slogan: **"Enhance your crew."**
 
-## Qué es este proyecto
-Smart Yat es una app móvil (Android/iOS) de gestión de tripulación para superyates.
-Permite a armadores y capitanes gestionar documentación, certificados y comunicación
-de la tripulación desde un dispositivo. Slogan: "Intelligent yatch management".
+El nombre canónico es **SmartYat**. Los nombres "Smart Yat OS" y "SmartCrew"
+aparecen en documentos antiguos pero ya no se usan. Si los ves en código o docs,
+trátalos como erratas históricas — el naming actual es SmartYat.
 
-## Stack técnico
-- **Frontend:** Flutter / Dart
-- **Backend:** Supabase (base de datos, autenticación, storage)
-- **AI:** Claude API (Anthropic) – asistente de voz HEY YAT
-- **Pagos:** Stripe (pendiente de implementar)
-- **Target:** Android + iOS (también configurado para Linux, macOS, Web, Windows)
+## Stack
 
-## Estructura real del proyecto
+- **Flutter** (Dart) — Android primero, iOS previsto
+- **Supabase** — PostgreSQL, Storage, Auth (pendiente), Edge Functions (pendiente)
+  - URL: `https://egetcuorhgmpygxcpfjk.supabase.co`
+- **Anthropic Claude API** — clasificación de voz HEY YAT, OCR de certificados,
+  traducción canónica a inglés (`canonical_english`) para multiidioma
 
-lib/
-  main.dart
-  config/
-    api_config.dart          ← claves y configuración de APIs
-    api_config.example.dart  ← plantilla sin datos sensibles
-    theme.dart               ← tema visual de la app
-  l10n/                      ← internacionalización (EN, ES, FR, RU, ZH)
-  models/
-    models.dart
-  providers/
-    app_provider.dart        ← gestión de estado global
-  screens/
-    login_screen.dart
-    force_pin_change_screen.dart
-    crew_home.dart
-    manager_home.dart
-    crew/                    ← pantallas de tripulante
-    manager/                 ← pantallas de manager/capitán
-    settings/
-  services/
-    ai_service.dart          ← integración Claude API (HEY YAT)
-    auth_service.dart
-    connectivity_service.dart
-    document_scan_service.dart
-    language_service.dart
-    secure_auth_storage.dart ← credenciales seguras
-    storage_service.dart     ← Supabase storage
-    supabase_service.dart    ← cliente Supabase principal
-    translation_service.dart
-    tts_service.dart         ← text-to-speech (voz HEY YAT)
-  widgets/
-    common_widgets.dart
-    smartyat_logo.dart
-    translated_text.dart
+## Comandos clave
 
-assets/
-  images/
-    smartyat_logo.svg
-    smartyat_logo_tagline.svg
+```bash
+flutter pub get              # Instalar dependencias
+flutter run                  # Ejecutar en emulador o dispositivo conectado
+flutter analyze              # Linter
+flutter test                 # Tests
+flutter build apk --debug    # APK de pruebas
+flutter build apk --release  # APK de producción
+```
 
-supabase/
-  migrations/
-    20260502_multilingual.sql
+## Estructura esperada
 
-## Plugins Flutter en uso
-- local_auth_android – biometría y PIN
-- flutter_secure_storage – almacenamiento seguro
-- speech_to_text – entrada de voz (HEY YAT)
-- flutter_tts – text-to-speech (respuesta HEY YAT)
-- camera_android_camerax – escaneo de documentos
-- image_picker_android – selección de imágenes
-- file_picker – selección de archivos
-- connectivity_plus – detección de conectividad
-- permission_handler_android – permisos
-- url_launcher_android – URLs externas
+```
+smart_yat/
+├── lib/
+│   ├── config/          # api_config.dart, supabase_config.dart (gitignored)
+│   ├── constants/       # listas predefinidas: cargos, certificados, departamentos, unidades
+│   ├── models/          # modelos de datos (Task, CrewMember, Certificate, Incident, etc.)
+│   ├── screens/         # UI agrupada por módulo
+│   │   ├── auth/
+│   │   ├── crew/
+│   │   ├── tasks/
+│   │   ├── certificates/
+│   │   ├── inventory/
+│   │   ├── incidents/
+│   │   ├── dashboard/
+│   │   └── voice/       # HEY YAT
+│   ├── services/        # supabase_service, voice_classification_service, etc.
+│   ├── widgets/         # widgets reutilizables
+│   ├── l10n/            # archivos de localización (EN, ES, FR, RU, ZH)
+│   └── main.dart
+├── assets/              # imágenes, logo, fuentes
+├── android/             # config nativa Android
+├── ios/                 # config nativa iOS (futuro)
+└── pubspec.yaml
+```
 
-## Roles de usuario
-- **Crew (tripulante):** acceso a su perfil y documentos
-- **Manager / Capitán:** acceso completo a gestión de tripulación
-
-## Funcionalidades implementadas o en desarrollo
-- Login con PIN y biometría
-- Cambio forzado de PIN en primer acceso
-- Gestión de tripulantes (perfil, documentos, certificados)
-- Escaneo de documentos con cámara
-- Asistente de voz HEY YAT (Claude API + TTS + speech-to-text)
-- Soporte multiidioma: inglés, español, francés, ruso, chino
-- Detección de conectividad
+Si la estructura real difiere, prioriza la real e infórmame antes de moverla.
 
 ## Convenciones de código
-- Nombrado en inglés (código, variables, funciones)
-- Comentarios en español preferiblemente
-- No modificar tablas de Supabase sin crear una migración en supabase/migrations/
-- Toda integración con Claude API debe pasar por /services/ai_service.dart
-- Las claves de API van en api_config.dart (ignorado en git, nunca hardcodeadas)
 
-## Comandos habituales
-flutter run                  # lanzar en emulador
-flutter build apk            # build Android
-flutter test                 # tests
-supabase db push             # aplicar migraciones
+- Variables, funciones y archivos en inglés
+- Strings de UI en el sistema multiidioma — nunca hardcodear textos visibles
+- Indentación de 2 espacios (estándar Dart)
+- `async/await`, no `.then()`
+- `const` cuando se pueda; `final` por defecto sobre `var`
+- Pantallas: `StatefulWidget` solo si tienen estado interno; en otro caso `StatelessWidget`
+- Servicios externos (Supabase, Claude API) como singletons inyectables
+- Nombres de tablas Supabase en `snake_case` plural (`crew_members`, `inventory_items`)
+- Nombres de campos en `snake_case` (`created_at`, `yacht_id`, `canonical_english`)
 
-## Restricciones importantes
-- No hardcodear API keys. Usar api_config.dart (ver api_config.example.dart como plantilla).
-- No modificar Supabase directamente en producción; siempre mediante migraciones.
-- HEY YAT no debe almacenar transcripciones de voz en claro.
-- api_config.dart está en .gitignore; nunca subirlo al repositorio.
+## Configuración y secretos
 
-## Contexto de negocio relevante
-- El desarrollador principal no tiene background técnico previo.
-  Priorizar siempre explicaciones claras y soluciones simples.
-- Fase actual: MVP en desarrollo.
-- Modelo de negocio: pendiente de definir (hardware + software, turnkey).
-- Mercado objetivo: superyates (24m+), hubs en Palma, Antibes, Fort Lauderdale.
+- API keys NUNCA se commitean
+- `lib/config/api_config.dart` está en `.gitignore`
+- La `anon_key` de Supabase es pública por diseño, pero la `service_role_key` jamás va al cliente
+- Si necesitas leer un secreto y no está disponible, pídeselo a Vicente — no lo inventes
 
-## Documentación interna relevante
-- guia_supabase_auth_flutter.md – autenticación Supabase
-- SmartCrew_Multiidioma_v2.4_para_Claude_Code.md – contexto multiidioma
-- smartyat_claude_code_prompt.md – prompt de referencia para Claude Code
+## Esquema Supabase actual
+
+11 tablas, todas con `yacht_id` como clave de aislamiento por yate:
+
+`yachts`, `users`, `crew_members`, `tasks`, `certificates`, `inventory_items`,
+`incidents`, `voice_commands`, `pending_voice_messages`, `scanned_documents`,
+`owner_preferences` (en desuso desde v2.2).
+
+**Aviso de seguridad:** todas las tablas tienen RLS habilitado pero con política
+`anon_full_access` que anula la protección. Está documentado en el plan de
+seguridad y la Fase 1 (integrar Supabase Auth + políticas RLS por `yacht_id`)
+es bloqueante antes de publicar en Google Play. No introduzcas funcionalidad
+nueva que dependa de la seguridad actual asumiendo que es correcta — no lo es.
+
+## Workflow de cambios
+
+1. Lee este archivo y los docs relevantes antes de tocar código
+2. Revisa los archivos del módulo afectado para conocer las convenciones reales
+3. Implementa los cambios siguiendo el estilo existente
+4. Si añades dependencias en `pubspec.yaml`, ejecuta `flutter pub get` y justifícalo brevemente
+5. Verifica con `flutter analyze` antes de dar por terminado
+6. Si el cambio toca BD, genera la migración SQL correspondiente y guárdala en `/supabase/migrations`
+7. Al final de la sesión, recuerda al usuario el commit a GitHub:
+
+```bash
+git add .
+git commit -m "mensaje descriptivo en imperativo"
+git push
+```
+
+## Cosas que NO hacer
+
+- No cambiar el naming del proyecto: es SmartYat
+- No commitear API keys, anon keys con bypass, ni nada en `lib/config/api_config.dart`
+- No tocar `android/app/build.gradle` ni `AndroidManifest.xml` salvo necesidad real y avisando antes
+- No introducir librerías pesadas sin justificarlo — la app corre en tablets modestas
+- No romper el modo offline-first: cualquier nueva funcionalidad debe seguir funcionando sin red
+- No hardcodear strings visibles para el usuario — pasan por el sistema de localización
+- No asumir que la migración SQL ya está aplicada en Supabase: confirma antes de usar columnas nuevas
+
+## Estilo de respuesta
+
+Directo y técnico. Sin "¡por supuesto!", sin parafrasear la petición, sin entusiasmo de relleno.
+Si no sabes algo del código local, léelo antes de inventar.
+Si una decisión es del usuario (naming, UX, prioridad), pregunta — no asumas.
+Cuando termines una tarea, resume en una frase qué cambió y dónde.
